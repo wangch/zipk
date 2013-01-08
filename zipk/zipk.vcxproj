@@ -1,0 +1,155 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{F13E48A7-0EA3-4183-9828-B0C9EB8048B2}</ProjectGuid>
+    <Keyword>Win32Proj</Keyword>
+    <RootNamespace>zipk</RootNamespace>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v110</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v110</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <LinkIncremental>true</LinkIncremental>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <LinkIncremental>false</LinkIncremental>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>Disabled</Optimization>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;ZLIB_WINAPI;_CRT_NONSTDC_NO_DEPRECATE;_CRT_SECURE_NO_DEPRECATE;_CRT_NONSTDC_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+      <AdditionalIncludeDirectories>zlib-1.2.5;zlib-1.2.5\contrib\minizip;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>gdiplus.lib;comctl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <Optimization>MaxSpeed</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;ZLIB_WINAPI;_CRT_NONSTDC_NO_DEPRECATE;_CRT_SECURE_NO_DEPRECATE;_CRT_NONSTDC_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <AdditionalIncludeDirectories>zlib-1.2.5;zlib-1.2.5\contrib\minizip;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+      <AdditionalDependencies>gdiplus.lib;comctl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <Text Include="ReadMe.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="button.h" />
+    <ClInclude Include="picex.h" />
+    <ClInclude Include="Resource.h" />
+    <ClInclude Include="stdafx.h" />
+    <ClInclude Include="targetver.h" />
+    <ClInclude Include="zipk.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="button.cc" />
+    <ClCompile Include="picex.cc" />
+    <ClCompile Include="stdafx.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="zipk.cpp" />
+    <ClCompile Include="zlib-1.2.5\adler32.c" />
+    <ClCompile Include="zlib-1.2.5\compress.c" />
+    <ClCompile Include="zlib-1.2.5\contrib\minizip\ioapi.c" />
+    <ClCompile Include="zlib-1.2.5\contrib\minizip\unzip.c" />
+    <ClCompile Include="zlib-1.2.5\crc32.c" />
+    <ClCompile Include="zlib-1.2.5\deflate.c" />
+    <ClCompile Include="zlib-1.2.5\gzclose.c" />
+    <ClCompile Include="zlib-1.2.5\gzlib.c" />
+    <ClCompile Include="zlib-1.2.5\gzread.c" />
+    <ClCompile Include="zlib-1.2.5\gzwrite.c" />
+    <ClCompile Include="zlib-1.2.5\infback.c" />
+    <ClCompile Include="zlib-1.2.5\inffast.c" />
+    <ClCompile Include="zlib-1.2.5\inflate.c" />
+    <ClCompile Include="zlib-1.2.5\inftrees.c" />
+    <ClCompile Include="zlib-1.2.5\minigzip.c" />
+    <ClCompile Include="zlib-1.2.5\trees.c" />
+    <ClCompile Include="zlib-1.2.5\uncompr.c" />
+    <ClCompile Include="zlib-1.2.5\zutil.c" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="zipk.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="..\..\..\..\zipk\c9-d.com_rinoa_icon_set1\home.png" />
+    <Image Include="icon1.ico" />
+    <Image Include="res\back.png" />
+    <Image Include="res\back1.png" />
+    <Image Include="res\back2.png" />
+    <Image Include="res\clockwise.png" />
+    <Image Include="res\clockwise1.png" />
+    <Image Include="res\clockwise2.png" />
+    <Image Include="res\counterclockwise.png" />
+    <Image Include="res\counterclockwise1.png" />
+    <Image Include="res\counterclockwise2.png" />
+    <Image Include="res\del.png" />
+    <Image Include="res\del1.png" />
+    <Image Include="res\del2.png" />
+    <Image Include="res\fit.png" />
+    <Image Include="res\fit1.png" />
+    <Image Include="res\fit2.png" />
+    <Image Include="res\full.png" />
+    <Image Include="res\full1.png" />
+    <Image Include="res\full2.png" />
+    <Image Include="res\next.png" />
+    <Image Include="res\next1.png" />
+    <Image Include="res\next2.png" />
+    <Image Include="res\zoom.png" />
+    <Image Include="res\zoom1.png" />
+    <Image Include="small.ico" />
+    <Image Include="zipk.ico" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>
