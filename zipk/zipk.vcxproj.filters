@@ -1,0 +1,195 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="zpik">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="miniunzip">
+      <UniqueIdentifier>{8b76afea-9d64-4a44-b897-9786a84e1f3d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="resource">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="ReadMe.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="zipk.h">
+      <Filter>zpik</Filter>
+    </ClInclude>
+    <ClInclude Include="button.h">
+      <Filter>zpik</Filter>
+    </ClInclude>
+    <ClInclude Include="picex.h">
+      <Filter>zpik</Filter>
+    </ClInclude>
+    <ClInclude Include="Resource.h">
+      <Filter>zpik</Filter>
+    </ClInclude>
+    <ClInclude Include="stdafx.h">
+      <Filter>zpik</Filter>
+    </ClInclude>
+    <ClInclude Include="targetver.h">
+      <Filter>zpik</Filter>
+    </ClInclude>
+    <ClInclude Include="ShowStyle.h">
+      <Filter>zpik</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="stdafx.cpp">
+      <Filter>zpik</Filter>
+    </ClCompile>
+    <ClCompile Include="zipk.cpp">
+      <Filter>zpik</Filter>
+    </ClCompile>
+    <ClCompile Include="button.cc">
+      <Filter>zpik</Filter>
+    </ClCompile>
+    <ClCompile Include="picex.cc">
+      <Filter>zpik</Filter>
+    </ClCompile>
+    <ClCompile Include="zlib-1.2.5\adler32.c">
+      <Filter>miniunzip</Filter>
+    </ClCompile>
+    <ClCompile Include="zlib-1.2.5\compress.c">
+      <Filter>miniunzip</Filter>
+    </ClCompile>
+    <ClCompile Include="zlib-1.2.5\crc32.c">
+      <Filter>miniunzip</Filter>
+    </ClCompile>
+    <ClCompile Include="zlib-1.2.5\deflate.c">
+      <Filter>miniunzip</Filter>
+    </ClCompile>
+    <ClCompile Include="zlib-1.2.5\gzclose.c">
+      <Filter>miniunzip</Filter>
+    </ClCompile>
+    <ClCompile Include="zlib-1.2.5\gzlib.c">
+      <Filter>miniunzip</Filter>
+    </ClCompile>
+    <ClCompile Include="zlib-1.2.5\gzread.c">
+      <Filter>miniunzip</Filter>
+    </ClCompile>
+    <ClCompile Include="zlib-1.2.5\gzwrite.c">
+      <Filter>miniunzip</Filter>
+    </ClCompile>
+    <ClCompile Include="zlib-1.2.5\infback.c">
+      <Filter>miniunzip</Filter>
+    </ClCompile>
+    <ClCompile Include="zlib-1.2.5\inffast.c">
+      <Filter>miniunzip</Filter>
+    </ClCompile>
+    <ClCompile Include="zlib-1.2.5\inflate.c">
+      <Filter>miniunzip</Filter>
+    </ClCompile>
+    <ClCompile Include="zlib-1.2.5\inftrees.c">
+      <Filter>miniunzip</Filter>
+    </ClCompile>
+    <ClCompile Include="zlib-1.2.5\minigzip.c">
+      <Filter>miniunzip</Filter>
+    </ClCompile>
+    <ClCompile Include="zlib-1.2.5\trees.c">
+      <Filter>miniunzip</Filter>
+    </ClCompile>
+    <ClCompile Include="zlib-1.2.5\uncompr.c">
+      <Filter>miniunzip</Filter>
+    </ClCompile>
+    <ClCompile Include="zlib-1.2.5\zutil.c">
+      <Filter>miniunzip</Filter>
+    </ClCompile>
+    <ClCompile Include="zlib-1.2.5\contrib\minizip\unzip.c">
+      <Filter>miniunzip</Filter>
+    </ClCompile>
+    <ClCompile Include="zlib-1.2.5\contrib\minizip\ioapi.c">
+      <Filter>miniunzip</Filter>
+    </ClCompile>
+    <ClCompile Include="ShowStyle.cpp">
+      <Filter>zpik</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="zipk.rc">
+      <Filter>resource</Filter>
+    </ResourceCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="small.ico">
+      <Filter>resource</Filter>
+    </Image>
+    <Image Include="zipk.ico">
+      <Filter>resource</Filter>
+    </Image>
+    <Image Include="res\back.png">
+      <Filter>resource</Filter>
+    </Image>
+    <Image Include="res\back1.png">
+      <Filter>resource</Filter>
+    </Image>
+    <Image Include="res\back2.png">
+      <Filter>resource</Filter>
+    </Image>
+    <Image Include="res\clockwise.png">
+      <Filter>resource</Filter>
+    </Image>
+    <Image Include="res\clockwise1.png">
+      <Filter>resource</Filter>
+    </Image>
+    <Image Include="res\clockwise2.png">
+      <Filter>resource</Filter>
+    </Image>
+    <Image Include="res\counterclockwise.png">
+      <Filter>resource</Filter>
+    </Image>
+    <Image Include="res\counterclockwise1.png">
+      <Filter>resource</Filter>
+    </Image>
+    <Image Include="res\counterclockwise2.png">
+      <Filter>resource</Filter>
+    </Image>
+    <Image Include="res\del.png">
+      <Filter>resource</Filter>
+    </Image>
+    <Image Include="res\del1.png">
+      <Filter>resource</Filter>
+    </Image>
+    <Image Include="res\del2.png">
+      <Filter>resource</Filter>
+    </Image>
+    <Image Include="res\fit.png">
+      <Filter>resource</Filter>
+    </Image>
+    <Image Include="res\fit1.png">
+      <Filter>resource</Filter>
+    </Image>
+    <Image Include="res\fit2.png">
+      <Filter>resource</Filter>
+    </Image>
+    <Image Include="res\full.png">
+      <Filter>resource</Filter>
+    </Image>
+    <Image Include="res\full1.png">
+      <Filter>resource</Filter>
+    </Image>
+    <Image Include="res\full2.png">
+      <Filter>resource</Filter>
+    </Image>
+    <Image Include="res\next.png">
+      <Filter>resource</Filter>
+    </Image>
+    <Image Include="res\next1.png">
+      <Filter>resource</Filter>
+    </Image>
+    <Image Include="res\next2.png">
+      <Filter>resource</Filter>
+    </Image>
+    <Image Include="res\zoom.png">
+      <Filter>resource</Filter>
+    </Image>
+    <Image Include="res\zoom1.png">
+      <Filter>resource</Filter>
+    </Image>
+  </ItemGroup>
+</Project>

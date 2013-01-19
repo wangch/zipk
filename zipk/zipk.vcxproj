@@ -86,6 +86,7 @@
     <ClInclude Include="button.h" />
     <ClInclude Include="picex.h" />
     <ClInclude Include="Resource.h" />
+    <ClInclude Include="ShowStyle.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />
     <ClInclude Include="zipk.h" />
@@ -93,6 +94,7 @@
   <ItemGroup>
     <ClCompile Include="button.cc" />
     <ClCompile Include="picex.cc" />
+    <ClCompile Include="ShowStyle.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
@@ -121,8 +123,6 @@
     <ResourceCompile Include="zipk.rc" />
   </ItemGroup>
   <ItemGroup>
-    <Image Include="..\..\..\..\zipk\c9-d.com_rinoa_icon_set1\home.png" />
-    <Image Include="icon1.ico" />
     <Image Include="res\back.png" />
     <Image Include="res\back1.png" />
     <Image Include="res\back2.png" />

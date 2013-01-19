@@ -43,7 +43,14 @@ void Button::draw(HDC dc) {
       img_info img = this->imgs_[this->statuse_];
       Gdiplus::Rect rc(img.x, img.y, img.w, img.h);
       if (img.img == 0) {
-         Gdiplus::Image m(img.fname.c_str());        
+         wchar_t filep[MAX_PATH];
+         ::GetModuleFileName(NULL, filep, _MAX_PATH);
+         std::wstring p(filep);
+         int pos = p.find_last_of(L'\\');
+         if (pos != std::wstring::npos) {
+            p = p.substr(0, pos+1);
+         }
+         Gdiplus::Image m((p+img.fname).c_str());        
          g->DrawImage(&m, rc);
       } else {
          g->DrawImage(img.img, rc);
@@ -140,28 +147,6 @@ LRESULT CALLBACK Button::WndProc(UINT message, WPARAM wParam, LPARAM lParam) {
       this->statuse_ = NORMAL;
       break;
    case WM_ERASEBKGND: 
-      {
-         //HDC hdc = (HDC)wParam;
-         //RECT rc;
-         //::GetWindowRect(this->hw_, &rc);
-         //int w = rc.right - rc.left;
-         //int h = rc.bottom - rc.top;
-         //HWND pw = ::GetParent(this->hw_);
-         //POINT pt;
-         //pt.x = rc.left;
-         //pt.y = rc.top;
-         //::ScreenToClient(pw, &pt);
-         //rc.left = pt.x;
-         //rc.top = pt.y;
-         //rc.right = pt.x + w;
-         //rc.bottom = pt.y = h;
-         //::InvalidateRect(pw, &rc, 0);
-         //HDC pdc = ::GetDC(pw);
-         //::BitBlt(hdc, 0, 0, w, h, pdc, pt.x, pt.y, SRCCOPY);
-         //::ReleaseDC(pw, pdc);
-         //SetBkMode(hdc, TRANSPARENT);
-         //this->draw(hdc);
-      }
       break;
    default:
       return ::CallWindowProc(this->btn_proc_, this->hw_, message, wParam, lParam);
@@ -219,13 +204,20 @@ void Button::SetBkColor(Gdiplus::Color color) {
 
 void Button::Show(int x, int y, int w, int h) {
    ::MoveWindow(this->hw_, x, y, w, h, TRUE);
-   ::UpdateWindow(this->hw_);
+   this->rc_.X = x;
+   this->rc_.Y = y;
+   this->rc_.Width = w;
+   this->rc_.Height = h;
    ::ShowWindow(this->hw_, SW_SHOW);
    this->re_draw();
 }
 
 void Button::Show(int x, int y) {
    this->Show(x, y, 25, 25);
+}
+
+void Button::hide() {
+   ::ShowWindow(this->hw_, SW_HIDE);
 }
 
 void Button::SetRgn(HRGN rgn) {

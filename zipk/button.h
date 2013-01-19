@@ -44,8 +44,10 @@ public:
    void SetImg(HINSTANCE hinst, int rcid, int status, int x, int y, int w, int h);
    void Show(int x, int y, int w, int h);
    void Show(int x, int y);
+   void hide();
    void SetRgn(HRGN rgn);
    HWND hw() { return hw_; }
+   Gdiplus::Rect rect() { return rc_; } 
 
    LRESULT CALLBACK WndProc(UINT message, WPARAM wParam, LPARAM lParam);
 private:
@@ -61,6 +63,7 @@ private:
    std::map<int, img_info> imgs_;
    
    Gdiplus::Color bk_color_;
+   Gdiplus::Rect rc_;
    WNDPROC btn_proc_;
    int statuse_;
 };
