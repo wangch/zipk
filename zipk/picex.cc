@@ -521,11 +521,11 @@ static void do_size(HWND hw, int w, int h) {
       int w0 = (w-340)/2+20;
       g_tb.btns[0].Show(w0, btn_top, 37, 26);
       g_tb.btns[1].Show(w0+57, btn_top, 27, 26);
-      g_tb.btns[2].Show(w0+57+47, btn_top, 52, 26);
-      g_tb.btns[3].Show(w0+57+47+52, btn_top-11, 42, 50);
-      g_tb.btns[4].Show(w0+57+47+52+42, btn_top, 52, 26);
-      g_tb.btns[5].Show(w0+57+47+52+42+72, btn_top, 25, 26);
-      g_tb.btns[6].Show(w0+57+47+52+42+72+45, btn_top, 25, 26);
+      g_tb.btns[2].Show(w0+57+47, btn_top, 53, 26);
+      g_tb.btns[3].Show(w0+57+47+53, btn_top-11, 42, 50);
+      g_tb.btns[4].Show(w0+57+47+53+42, btn_top, 53, 26);
+      g_tb.btns[5].Show(w0+57+47+53+42+72, btn_top, 25, 26);
+      g_tb.btns[6].Show(w0+57+47+53+42+72+45, btn_top, 25, 26);
       //g_tb.btns[7].Show(w0+57+47+52+42+72+45+45, btn_top, 25, 26);
 
    } else {
