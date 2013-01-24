@@ -294,7 +294,7 @@ static int add_items1() {
    lvi.state     = 0;
    node* n = g_lv.n;
    ::ImageList_Destroy(g_lv.il);
-   g_lv.il = ::ImageList_Create(92, 70, ILC_COLOR32, 1, 1);
+   g_lv.il = ::ImageList_Create(92, 70, ILC_COLOR32|ILC_ORIGINALSIZE, 1, 1);
    HIMAGELIST il = g_lv.il;
    ListView_SetImageList(g_lv.lv, il, LVSIL_NORMAL);
 
@@ -305,7 +305,8 @@ static int add_items1() {
       if (c->type == 1) {
          image img = unzip_img(c, g_lv.unz);
          if (img.img) {
-            Gdiplus::Image* pm = img.img->GetThumbnailImage(92, 70);
+            Gdiplus::Rect rc = fit_rc(92, 70, img.img);
+            Gdiplus::Image* pm = img.img->GetThumbnailImage(rc.Width, rc.Height);
             Gdiplus::Bitmap* bmp = static_cast<Gdiplus::Bitmap*>(pm);
             if (bmp) {
                HBITMAP hbmp;
@@ -362,7 +363,7 @@ static wchar_t* format_thousands_separator(long  val) {
     do {
         m = val % 10;
         val = val / 10;
-        *--p = L'0' + (m < 0 ? -m : m);
+        *--p = L'0' + (wchar_t)(m < 0 ? -m : m);
 
         if (!val && m < 0) 
             *--p = L'-';
@@ -390,7 +391,7 @@ static int read_file_info(unzFile uf) {
       node* n = new node;
       std::wstring path = utf8util::UTF16FromUTF8(fname);
       wchar_t time[32];
-      ::swprintf(time, L"%d/%d/%d %d:%d", 
+      ::wsprintf(time, L"%d/%d/%d %d:%d", 
          fi.tmu_date.tm_year, fi.tmu_date.tm_mon, fi.tmu_date.tm_mday,
          fi.tmu_date.tm_hour, fi.tmu_date.tm_min);
       n->size = fi.uncompressed_size;
@@ -480,10 +481,10 @@ static int init(HWND pw) {
    Gdiplus::Font* f = new Gdiplus::Font(&ff, 9);
    Gdiplus::Font* f1 = new Gdiplus::Font(&ff, 12, 4);
 
-   g_lv.btns[0].Init(0, pw, hInst, btn_click0);
-   g_lv.btns[1].Init(1, pw, hInst, btn_click1);
-   g_lv.btns[2].Init(2, pw, hInst, btn_click2);
-   g_lv.btns[3].Init(3, pw, hInst, btn_click3);
+   g_lv.btns[0].Init(0, pw, hInst, 0, btn_click0);
+   g_lv.btns[1].Init(1, pw, hInst, 0, btn_click1);
+   g_lv.btns[2].Init(2, pw, hInst, 0, btn_click2);
+   g_lv.btns[3].Init(3, pw, hInst, 0, btn_click3);
            
    g_lv.btns[0].SetTxtFont(f);
    g_lv.btns[1].SetTxtFont(f);
@@ -610,7 +611,7 @@ static void do_draw(HWND hWnd, HDC dc) {
 
    Gdiplus::Graphics* g = new Gdiplus::Graphics(mdc);
 
-   Gdiplus::RectF grc(x, y, w, h);
+   Gdiplus::Rect grc(x, y, w, h);
    Gdiplus::LinearGradientBrush lbr(grc, 
       Gdiplus::Color(69, 110, 149), Gdiplus::Color(96, 141, 198), 0);
    g->FillRectangle(&lbr, x, y, w, h);

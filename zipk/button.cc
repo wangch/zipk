@@ -59,7 +59,7 @@ void Button::draw(HDC dc) {
    }
 
    if (this->txt_.txt.length() > 0) {
-      Gdiplus::PointF pt(this->txt_.x, this->txt_.y);
+      Gdiplus::PointF pt((Gdiplus::REAL)this->txt_.x, (Gdiplus::REAL)this->txt_.y);
       Gdiplus::SolidBrush sbr(Gdiplus::Color::White);
       g->DrawString(this->txt_.txt.c_str(), this->txt_.txt.length(), this->txt_.font, pt, &sbr);
    }
@@ -103,6 +103,9 @@ LRESULT CALLBACK Button::WndProc(UINT message, WPARAM wParam, LPARAM lParam) {
       */
       this->statuse_ = MLBTNDOWN;
       this->re_draw();
+      if (this->fn1_) {
+         fn1_(this);
+      }
       break;
    case WM_LBUTTONUP:
       /*
@@ -117,10 +120,10 @@ LRESULT CALLBACK Button::WndProc(UINT message, WPARAM wParam, LPARAM lParam) {
       //this->cw_->Notify(this->id_);
       */
       this->statuse_ = NORMAL;
-      if (this->fn_) {
-         fn_(this);
-      }
       this->re_draw();
+      if (this->fn2_) {
+         fn2_(this);
+      }
       break;
    case WM_MOUSEMOVE:
       {
@@ -154,7 +157,7 @@ LRESULT CALLBACK Button::WndProc(UINT message, WPARAM wParam, LPARAM lParam) {
    return 0;
 }
 
-int Button::Init(int id, HWND pw, HINSTANCE hinst, btn_click fn, int idc) {
+int Button::Init(int id, HWND pw, HINSTANCE hinst, int idc, btn_click fn1, btn_click fn2) {
    HWND hw = ::CreateWindowEx(0, WC_BUTTON, L"",
       WS_CHILD | WS_VISIBLE | BS_CENTER | BS_FLAT | BS_OWNERDRAW, 
       0, 0, 0, 0,
@@ -164,7 +167,8 @@ int Button::Init(int id, HWND pw, HINSTANCE hinst, btn_click fn, int idc) {
    }
 
    this->hw_ = hw;
-   this->fn_ = fn;
+   this->fn1_ = fn1;
+   this->fn2_ = fn2;
    this->id_ = id;
 
    ::SetWindowLongPtr(this->hw_, GWLP_USERDATA, (LONG)this);

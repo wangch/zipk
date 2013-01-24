@@ -35,7 +35,7 @@ class Button {
 public:
    Button();
    ~Button();
-   int Init(int id, HWND pw, HINSTANCE hinst, btn_click fn, int idc = 0);
+   int Init(int id, HWND pw, HINSTANCE hinst, int idc = 0, btn_click fn1 = 0, btn_click fn2 = 0);
    void SetText(const std::wstring& txt, int x, int y);
    void SetTxtColor(Gdiplus::Color color);
    void SetTxtFont(Gdiplus::Font* f);
@@ -57,7 +57,8 @@ private:
    HWND hw_;
    int id_;
 
-   btn_click fn_;
+   btn_click fn1_;
+   btn_click fn2_;
 
    txt_info txt_;
    std::map<int, img_info> imgs_;
