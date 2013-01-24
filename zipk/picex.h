@@ -56,6 +56,6 @@ public:
 };
 
 image unzip_img(node* n, unzFile uf);
-
+Gdiplus::Rect fit_rc(int w, int h, Gdiplus::Image* img);
 
 #endif
