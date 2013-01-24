@@ -55,12 +55,13 @@ int btn_click0(Button* btn) {
       return -1;
    }
    g_tb.fit = g_tb.ori = false;
+   ::EnableWindow(btn->hw(), 0);
    //Gdiplus::Rect rc = btn->rect();
    ::ShowWindow(g_tb.zoom_bar, SW_SHOW);
    ::SendMessage(g_tb.zoom_bar, TBM_SETPOS, TRUE, 11 - g_tb.zoom);
    ::SetFocus(g_tb.zoom_bar);
    ::SetActiveWindow(g_tb.zoom_bar);
-   ::EnableWindow(btn->hw(), 0);
+   ::InvalidateRect(g_tb.zoom_bar, 0, TRUE);
 
    return 0;
 }
@@ -795,7 +796,7 @@ int PicEx::Init(HWND pw, HINSTANCE hinst, unzFile uf) {
 
    reg_class(hinst, 0);
    HWND hw = ::CreateWindowEx(0, pic_class_name, L"Í¼Æ¬ä¯ÀÀÆ÷", 
-      WS_OVERLAPPEDWINDOW | WS_VISIBLE,
+      WS_OVERLAPPEDWINDOW,
       0, 0, 0, 0, 0, 0, hinst, NULL);
    if (!hw) {
       int e = ::GetLastError();

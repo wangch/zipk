@@ -294,7 +294,15 @@ static int add_items1() {
    lvi.state     = 0;
    node* n = g_lv.n;
    ::ImageList_Destroy(g_lv.il);
-   g_lv.il = ::ImageList_Create(92, 70, ILC_COLOR32|ILC_ORIGINALSIZE, 1, 1);
+   OSVERSIONINFO os;
+   os.dwOSVersionInfoSize=sizeof(os);
+   ::GetVersionEx(&os);
+
+   if (os.dwMajorVersion > 5) { 
+      g_lv.il = ::ImageList_Create(92, 70, ILC_COLOR32|ILC_MIRROR|ILC_ORIGINALSIZE|ILC_HIGHQUALITYSCALE, 1, 1);
+   } else {
+      g_lv.il = ::ImageList_Create(92, 70, ILC_COLOR32|ILC_MIRROR, 1, 1);
+   }
    HIMAGELIST il = g_lv.il;
    ListView_SetImageList(g_lv.lv, il, LVSIL_NORMAL);
 
@@ -305,8 +313,13 @@ static int add_items1() {
       if (c->type == 1) {
          image img = unzip_img(c, g_lv.unz);
          if (img.img) {
-            Gdiplus::Rect rc = fit_rc(92, 70, img.img);
-            Gdiplus::Image* pm = img.img->GetThumbnailImage(rc.Width, rc.Height);
+            Gdiplus::Image* pm;
+            if (os.dwMajorVersion > 5) {
+               Gdiplus::Rect rc = fit_rc(92, 70, img.img);
+               pm = img.img->GetThumbnailImage(rc.Width, rc.Height);
+            } else { 
+               pm = img.img->GetThumbnailImage(92, 70);
+            }
             Gdiplus::Bitmap* bmp = static_cast<Gdiplus::Bitmap*>(pm);
             if (bmp) {
                HBITMAP hbmp;
