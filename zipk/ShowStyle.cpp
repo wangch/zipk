@@ -72,25 +72,26 @@ bool MagicShow( HDC hSrcDC , int x , int y , HDC hDestDC , int xd , int yd , int
 bool SleepEx( DWORD dwMilliseconds )
 {
 	if( dwMilliseconds == 0 ) return TRUE;
+   ::Sleep(dwMilliseconds);
 
-	DWORD t1 = GetTickCount();
-	while(1)
-	{
-		DWORD t2 = GetTickCount();
-		if( t2 < t1 || (t2 - t1) > dwMilliseconds )break;
-		
-		MSG msg;
-		if( PeekMessage(&msg, NULL,  0, 0, PM_NOREMOVE) ) 
-		{
-			GetMessage( &msg, NULL,  0, 0 );
-			TranslateMessage(&msg); 
-			DispatchMessage(&msg); 
-		}
-		else
-		{
-			Sleep(1);
-		}
-	}
+	//DWORD t1 = GetTickCount();
+	//while(1)
+	//{
+	//	DWORD t2 = GetTickCount();
+	//	if( t2 < t1 || (t2 - t1) > dwMilliseconds )break;
+	//	
+	//	MSG msg;
+	//	if( PeekMessage(&msg, NULL,  0, 0, PM_NOREMOVE) ) 
+	//	{
+	//		GetMessage( &msg, NULL,  0, 0 );
+	//		TranslateMessage(&msg); 
+	//		DispatchMessage(&msg); 
+	//	}
+	//	else
+	//	{
+	//		Sleep(1);
+	//	}
+	//}
 	return TRUE;
 }
 

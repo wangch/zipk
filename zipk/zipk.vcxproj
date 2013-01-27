@@ -84,6 +84,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="button.h" />
+    <ClInclude Include="image.h" />
     <ClInclude Include="picex.h" />
     <ClInclude Include="Resource.h" />
     <ClInclude Include="ShowStyle.h" />
@@ -93,6 +94,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="button.cc" />
+    <ClCompile Include="image.cc" />
     <ClCompile Include="picex.cc" />
     <ClCompile Include="ShowStyle.cpp" />
     <ClCompile Include="stdafx.cpp">

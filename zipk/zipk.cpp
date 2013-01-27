@@ -5,6 +5,7 @@
 #include "zipk.h"
 #include "button.h"
 #include "picex.h"
+#include "image.h"
 #include "utf8conv.h"
 #include "resource.h"
 

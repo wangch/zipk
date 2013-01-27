@@ -8,6 +8,7 @@
 #include "resource.h"
 #include "utf8conv.h"
 #include "ShowStyle.h"
+#include "image.h"
 #include <process.h>
 #include <Windowsx.h>
 
@@ -21,32 +22,23 @@ static void do_size(HWND hw, int w, int h);
 
 struct tool_bar {
    tool_bar() : 
-      cw(false), ccw(false), fit(true), 
-      ori(false), zoom(1), slider_show(false), 
-      showing(false), bigger(false), dragging(false), 
-      sizing(false), zooming(false), hbr(0) {
-         new_pt.x = 0;
-         new_pt.y = 0;
+      slider_show(false), zoom(1), status(FIT) {
    }
 
-   int w, h;
    Button btns[7];
+   HWND zoom_bar0;
    HWND zoom_bar;
    HWND tb;
+   ImageCtrl img;
+   WNDPROC zoom_proc;
    WNDPROC stc_proc;
-   bool cw, ccw;
-   bool fit, ori;
-   bool slider_show, showing;
-   bool bigger, dragging;
-   bool sizing;
+   bool slider_show;
    int zoom;
-   bool zooming;
-   POINT last_pt, new_pt;
-   HBRUSH hbr;
    WINDOWPLACEMENT wp;
-   CRITICAL_SECTION cs;
-   RECT rc;
+   HANDLE m;
+   int status;
 } g_tb;
+
 
 int btn_click0(Button* btn) {
    HWND pw = ::GetParent(g_tb.tb);
@@ -54,14 +46,12 @@ int btn_click0(Button* btn) {
    if (!pe) {
       return -1;
    }
-   g_tb.fit = g_tb.ori = false;
-   ::EnableWindow(btn->hw(), 0);
-   //Gdiplus::Rect rc = btn->rect();
-   ::ShowWindow(g_tb.zoom_bar, SW_SHOW);
-   ::SendMessage(g_tb.zoom_bar, TBM_SETPOS, TRUE, 11 - g_tb.zoom);
-   ::SetFocus(g_tb.zoom_bar);
-   ::SetActiveWindow(g_tb.zoom_bar);
-   ::InvalidateRect(g_tb.zoom_bar, 0, TRUE);
+   ::ShowWindow(btn->hw(), SW_HIDE);
+   ::EnableWindow(g_tb.img.hw(), FALSE);
+   ::ShowWindow(g_tb.zoom_bar0, SW_SHOW);
+   ::SendMessage(g_tb.zoom_bar0, TBM_SETPOS, TRUE, 11 - g_tb.zoom);
+   ::SetFocus(g_tb.zoom_bar0);
+   ::SetCapture(g_tb.zoom_bar0);
 
    return 0;
 }
@@ -72,32 +62,33 @@ int btn_click1(Button* btn) {
    if (!pe) {
       return -1;
    }
-   g_tb.fit = !g_tb.fit;
-   g_tb.ori = !g_tb.fit;
-   ::InvalidateRect(pw, 0, true);
-   g_tb.last_pt.x = 0;
-   g_tb.last_pt.y = 0;
-   g_tb.new_pt.x = 0;
-   g_tb.new_pt.y = 0;
+   if (g_tb.status != FIT) {
+      g_tb.status = FIT;
+   } else {
+      g_tb.status = ORI;
+   }
+
+   g_tb.img.Show(g_tb.status);
    return 0;
 }
 
+int btn_click2(Button* btn);
 int btn_click4(Button* btn);
+
 static unsigned int __stdcall slider_show(void* p) {
    HWND pw = (HWND)p;
    while (1) {
-      ::EnterCriticalSection(&g_tb.cs);
-      if (!g_tb.showing) {
-         btn_click4(&g_tb.btns[4]);
-         g_tb.showing = true;
+      ::WaitForSingleObject(g_tb.m, INFINITE);
+      g_tb.img.Show(g_tb.status);
+      if (!g_tb.slider_show) {
+         g_tb.status = FIT;
+         g_tb.img.Show(g_tb.status);
+         ::SetEvent(g_tb.m);
+         break;
       }
-      ::LeaveCriticalSection(&g_tb.cs);
-      while (!g_tb.slider_show) {
-         ::SetWindowPlacement(pw, &g_tb.wp);
-         return 0;
-      }
-      ::Sleep(1000);
-   }
+      btn_click4(&g_tb.btns[4]);
+      ::SetEvent(g_tb.m);
+  }
    return 0;
 }
 
@@ -107,27 +98,23 @@ int btn_click3(Button* btn) {
    if (!pe) {
       return -1;
    }
-   g_tb.fit = g_tb.ori = false;
    ::GetWindowPlacement(pw, &g_tb.wp);
    int w = ::GetSystemMetrics(SM_CXSCREEN);
    int h = ::GetSystemMetrics(SM_CYSCREEN);
    RECT rc;
-   rc.left = rc.top = 0;;
+   rc.left = rc.top = 0;
    rc.right = w;
    rc.bottom = h;
    ::AdjustWindowRectEx(&rc, WS_CAPTION, FALSE, 0);
+   ::MoveWindow(pw, rc.left, rc.top, rc.right-rc.left, rc.bottom-rc.top, TRUE);
+   ::MoveWindow(g_tb.img.hw(), 0, 0, w, h, TRUE);
+
    g_tb.slider_show = true;
-   g_tb.rc = rc;
-   ::MoveWindow(pw, rc.left, rc.top, rc.right-rc.left, rc.bottom-rc.top+64, TRUE);
-   g_tb.showing = true;
+
    unsigned int n;
    ::ShowWindow(g_tb.tb, SW_HIDE);
    ::_beginthreadex(0, 0, slider_show, pw, 0, &n);
-   do_size(pw, w, h);
-   g_tb.last_pt.x = 0;
-   g_tb.last_pt.y = 0;
-   g_tb.new_pt.x = 0;
-   g_tb.new_pt.y = 0;
+   g_tb.status = SLIDER;
    return 0;
 }
 
@@ -165,23 +152,13 @@ int btn_click4(Button* btn) {
    if (img.img) {
       pe->img_ = img;
       pe->n_ = n;
+      g_tb.img.SetImg(img.img);
    }
-   ::InvalidateRect(pw, 0, true);
-   g_tb.last_pt.x = 0;
-   g_tb.last_pt.y = 0;
-   g_tb.new_pt.x = 0;
-   g_tb.new_pt.y = 0;
    return 0;
 }
 
 int btn_click5(Button* btn) {
-   HWND pw = ::GetParent(g_tb.tb);
-   PicEx* pe = (PicEx*)::GetWindowLongPtr(pw, GWLP_USERDATA);
-   if (!pe) {
-      return -1;
-   }
-   g_tb.ccw = true;
-   ::InvalidateRect(pw, 0, true);
+   g_tb.img.RotateFlip270();
    return 0;
 }
 
@@ -219,23 +196,13 @@ int btn_click2(Button* btn) {
    if (img.img) {
       pe->img_ = img;
       pe->n_ = n;
+      g_tb.img.SetImg(img.img);
    }
-   ::InvalidateRect(pw, 0, true);
-   g_tb.last_pt.x = 0;
-   g_tb.last_pt.y = 0;
-   g_tb.new_pt.x = 0;
-   g_tb.new_pt.y = 0;
    return 0;
 }
 
 int btn_click6(Button* btn) {
-   HWND pw = ::GetParent(g_tb.tb);
-   PicEx* pe = (PicEx*)::GetWindowLongPtr(pw, GWLP_USERDATA);
-   if (!pe) {
-      return -1;
-   }
-   g_tb.cw = true;
-   ::InvalidateRect(pw, 0, true);
+   g_tb.img.RotateFlip90();
    return 0;
 }
 
@@ -348,10 +315,31 @@ static void do_stcdraw(HWND hWnd, HDC dc) {
       mdc, x, y, SRCCOPY);
 
    delete g;
-   //::SelectObject(mdc, oldmap);
+   ::SelectObject(mdc, oldmap);
    ::DeleteObject(memmap); 
    ::DeleteDC(mdc);
-   //::InvalidateRect(g_tb.zoom_bar, NULL, TRUE);
+}
+
+static LRESULT CALLBACK _zoom_proc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) {
+   if (message == WM_MOUSEMOVE) {
+      if (MK_LBUTTON == wParam) {
+         int y = GET_Y_LPARAM(lParam);
+         int pos = SendMessage(g_tb.zoom_bar0, TBM_GETPOS, 0, 0);
+         int newpos = y / 20;
+         ::SendMessage(hWnd, TBM_SETPOS, TRUE, newpos);
+         if (pos != newpos) {
+            g_tb.zoom = 11 - newpos;
+            if (g_tb.zoom < 1 || g_tb.zoom > 11) {
+               return 0;
+            }
+            g_tb.status = ZOOM;
+            g_tb.img.Show(g_tb.status, g_tb.zoom);
+            ::InvalidateRect(g_tb.zoom_bar0, 0, true);
+            return 0;
+         }
+      }
+   }
+   return ::CallWindowProc(g_tb.zoom_proc, hWnd, message, wParam, lParam);
 }
 
 static LRESULT CALLBACK _stc_proc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) {
@@ -366,7 +354,11 @@ static LRESULT CALLBACK _stc_proc(HWND hWnd, UINT message, WPARAM wParam, LPARAM
 }
 
 static void init(HWND pw, HINSTANCE hInst) {
-   ::InitializeCriticalSection(&g_tb.cs);
+   //::InitializeCriticalSection(&g_tb.cs);
+   g_tb.m = CreateEvent(NULL, FALSE, TRUE, NULL);
+   g_tb.img.set_cs(g_tb.m);
+   g_tb.img.Init(pw, hInst);
+
    HWND hw = ::CreateWindowEx(0, WC_STATIC, L"",
       WS_CHILD | WS_VISIBLE, 
       0, 0, 0, 0,
@@ -398,201 +390,26 @@ static void init(HWND pw, HINSTANCE hInst) {
    //g_tb.btns[7].SetBkColor(bk_color);
    set_imgs1(hInst);
 
-   hw = ::CreateWindowEx(WS_EX_TOPMOST,                               // no extended styles 
-      TRACKBAR_CLASS,                  // class name 
-      L"Trackbar Control",              // title (caption) 
-      WS_CHILD | WS_VISIBLE | TBS_AUTOTICKS | TBS_VERT,              // style 
-      0, 0, 0, 0,                  // size 
-      pw, (HMENU)IDC_TRACEBAR,                     // control identifier 
-      hInst,                         // instance 
-      NULL                             // no WM_CREATE parameter 
-      ); 
+   hw = ::CreateWindowEx(0, TRACKBAR_CLASS, L"", 
+      WS_CHILD | WS_VISIBLE | TBS_AUTOTICKS | TBS_VERT | TBS_NOTIFYBEFOREMOVE,
+      0, 0, 0, 0,
+      pw, (HMENU)IDC_TRACEBAR, hInst, NULL); 
    if(!hw) {
       return;
    }
+   g_tb.zoom_proc = (WNDPROC)::SetWindowLongPtr(hw, GWLP_WNDPROC, (LONG)_zoom_proc);
 
    ::SendMessage(hw, TBM_SETRANGE, FALSE, MAKELONG(1,10));
    ::ShowWindow(hw, SW_HIDE);
-   g_tb.zoom_bar = hw;
+   g_tb.zoom_bar0 = hw;
 }
 
-static Gdiplus::Rect ori_rc(int w, int h, Gdiplus::Image* img) {
-   int w0 = img->GetWidth();
-   int h0 = img->GetHeight();
-
-   int x = (w - w0) / 2;
-   int y = (h - h0) / 2;
-
-   Gdiplus::Rect rc;
-   rc.X = x;
-   rc.Y = y;
-   rc.Width = w0;
-   rc.Height = h0;
-
-   g_tb.bigger = ((w0 > w) || (h0 > h));
-   if (1) {
-      rc.X += g_tb.new_pt.x;
-      rc.Y += g_tb.new_pt.y;
-      if (x < 0) {
-         if ((rc.X + w0) < w) {
-            rc.X = w - w0;
-            g_tb.new_pt.x = rc.X - x;
-         }
-         if (rc.X > 0) {
-            rc.X = 0;
-            g_tb.new_pt.x = 0 - x;
-         }
-      }
-      if (y < 0) {
-         if((rc.Y + h0) < h) {
-            rc.Y = h - h0;
-            g_tb.new_pt.y = rc.Y - y;
-         }
-         if (rc.Y > 0) {
-            rc.Y = 0;
-            g_tb.new_pt.y = rc.Y - y;
-         }
-      }
-   }
-      
-   return rc;
-}
-
-Gdiplus::Rect fit_rc(int w, int h, Gdiplus::Image* img) {
-   int w0 = img->GetWidth();
-   int h0 = img->GetHeight();
-
-   bool b = (double)w/h > (double)w0/h0;
-   int w1 = w, h1 = h;
-   if (b) {
-      h1 = h0 < h ? h0 : h;
-      w1 = w0 * h1 / h0;
-   } else {
-      w1 = w0 < w ? w0 : w;
-      h1 = h0 * w1 / w0;
-   }
-
-   int x = (w - w1) / 2;
-   int y = (h - h1) / 2;
-   if (x < 0) x = 0;
-   if (y < 0) y = 0;
-
-   Gdiplus::Rect rc;
-   rc.X = x;
-   rc.Y = y;
-   rc.Width = w1;
-   rc.Height = h1;
-
-   return rc;
-}
-
-static void re_draw(HWND hWnd) {
-   RECT rc;
-   ::GetClientRect(hWnd, &rc);
-   rc.bottom -= 64;
-   ::InvalidateRect(hWnd, &rc, TRUE);
-}
-
-static void do_draw(HWND hWnd, HDC dc) {
-   RECT rc;
-   ::GetClientRect(hWnd, &rc);
-   int x = rc.left;
-   int y = rc.top;
-   int w = rc.right - rc.left;
-   int h = rc.bottom - rc.top;
-   if (!g_tb.slider_show) {
-      h -= 64;
-   }
-
-   HBITMAP memmap = ::CreateCompatibleBitmap(dc, w, h);
-   HDC mdc = ::CreateCompatibleDC(dc); 
-   HBITMAP oldmap = (HBITMAP)::SelectObject(mdc, (HGDIOBJ)memmap);
-   Gdiplus::Graphics* g = new Gdiplus::Graphics(mdc);
-
-   Gdiplus::SolidBrush br(Gdiplus::Color::White);
-   g->FillRectangle(&br, 0, 0, w, h);
-
-   ::EnterCriticalSection(&g_tb.cs);
-   PicEx* pe = (PicEx*)::GetWindowLongPtr(hWnd, GWLP_USERDATA);
-   image img = pe->img_;
-   if (pe && img.img) {
-      if (g_tb.ccw) {
-         g_tb.ccw = false;
-         img.img->RotateFlip(Gdiplus::Rotate270FlipNone);
-         g->DrawImage(pe->img_.img, fit_rc(w, h, img.img));
-      } else if (g_tb.cw) {
-         g_tb.cw = false;
-         img.img->RotateFlip(Gdiplus::Rotate90FlipNone);
-         g->DrawImage(pe->img_.img, fit_rc(w, h, img.img));
-      } else if (g_tb.fit) {
-         g->DrawImage(pe->img_.img, fit_rc(w, h, img.img));
-      } else if (g_tb.ori) {
-         g->DrawImage(pe->img_.img, ori_rc(w, h, img.img));
-      } else if (g_tb.slider_show) {
-         if (w > 0 && h-64 > 0) {
-            Gdiplus::Rect rc;// = fit_rc(w, h, pe);
-            rc.X = g_tb.rc.left;
-            rc.Y = g_tb.rc.top;
-            rc.Width = g_tb.rc.right - rc.X;
-            rc.Height = g_tb.rc.bottom - rc.Y;
-            g->DrawImage(pe->img_.img, rc);
-            if (g_tb.showing) {
-               MagicShow(mdc, rc.X, rc.Y, dc, rc.X, rc.Y, rc.Width, rc.Height, 1, 19, ::rand()%19);
-               g_tb.showing = false;
-            }
-         }
-      } else {
-         Gdiplus::Rect rc = fit_rc(w, h, img.img);
-         int w0 = g_tb.zoom * rc.Width;
-         int h0 = g_tb.zoom * rc.Height;
-         int x0 = rc.X + (rc.Width - w0) / 2;
-         int x1 = x0;
-         int y0 = rc.Y + (rc.Height - h0) / 2;
-         int y1 = y0;
-         if (1) {
-            x0 += g_tb.new_pt.x;
-            y0 += g_tb.new_pt.y;
-            if (x1 < 0) {
-               if ((x0 + w0) < w) {
-                  x0 = w - w0;
-                  g_tb.new_pt.x = x0 - x1;
-               }
-               if (x0 > 0) {
-                  x0 = 0;
-                  g_tb.new_pt.x = 0 - x1;
-               }
-            }
-            if (y1 < 0) {
-               if((y0 + h0) < h) {
-                  y0 = h - h0;
-                  g_tb.new_pt.y = y0 - y1;
-               }
-               if (y0 > 0) {
-                  y0 = 0;
-                  g_tb.new_pt.y = y0 - y1;
-               }
-            }
-         }
-         g->DrawImage(pe->img_.img, x0, y0, w0, h0);
-         g_tb.bigger = ((w0 > w) || (h0 > h-64));
-      }
-   }
-   ::LeaveCriticalSection(&g_tb.cs);
-
-   BitBlt(dc, 
-      x, y, w, h, 
-      mdc, x, y, SRCCOPY);
-
-   delete g;
-   //::SelectObject(mdc, oldmap);
-   ::DeleteObject(memmap); 
-   ::DeleteDC(mdc);
-   ::InvalidateRect(g_tb.zoom_bar, NULL, TRUE);
-}
 
 static void do_size(HWND hw, int w, int h) {
    int th = h - 64;
    ::MoveWindow(g_tb.tb, 0, th, w, 64, TRUE);
+   ::MoveWindow(g_tb.img.hw(), 0, 0, w, th, TRUE);
+   g_tb.img.Show(g_tb.status, g_tb.zoom);
 
    int btn_top = 16+3;
    int w0 = (w-340)/2+20;
@@ -604,39 +421,9 @@ static void do_size(HWND hw, int w, int h) {
    g_tb.btns[5].Show(w0+57+47+53+42+72, btn_top, 25, 26);
    g_tb.btns[6].Show(w0+57+47+53+42+72+45, btn_top, 25, 26);
 
-   ::MoveWindow(g_tb.zoom_bar, w0, h-16-200, 30, 200, FALSE);
-   //::UpdateWindow(g_tb.tb);
-   //::InvalidateRect(g_tb.tb, NULL, TRUE);
+   ::MoveWindow(g_tb.zoom_bar0, w0, h-16-200, 30, 200, FALSE);
+   ::MoveWindow(g_tb.zoom_bar, 0, 0, 30, 200, FALSE);
 }
-
-static void do_size1(HWND hw, int w, int h) {
-   if (!g_tb.slider_show) {
-      int btn_top = h-64+16+3;
-      int w0 = (w-340)/2+20;
-      g_tb.btns[0].Show(w0, btn_top, 37, 26);
-      g_tb.btns[1].Show(w0+57, btn_top, 27, 26);
-      g_tb.btns[2].Show(w0+57+47, btn_top, 53, 26);
-      g_tb.btns[3].Show(w0+57+47+53, btn_top-11, 42, 50);
-      g_tb.btns[4].Show(w0+57+47+53+42, btn_top, 53, 26);
-      g_tb.btns[5].Show(w0+57+47+53+42+72, btn_top, 25, 26);
-      g_tb.btns[6].Show(w0+57+47+53+42+72+45, btn_top, 25, 26);
-      //g_tb.btns[7].Show(w0+57+47+52+42+72+45+45, btn_top, 25, 26);
-
-   } else {
-      g_tb.btns[0].hide();
-      g_tb.btns[1].hide();
-      g_tb.btns[2].hide();
-      g_tb.btns[3].hide();
-      g_tb.btns[4].hide();
-      g_tb.btns[5].hide();
-      g_tb.btns[6].hide();
-   }
-
-   //PicEx* pe = (PicEx*)::GetWindowLongPtr(hw, GWLP_USERDATA);
-   //if (pe) {
-   //}
-}
-
 
 static LRESULT CALLBACK _WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) {
    switch(message) {
@@ -644,15 +431,12 @@ static LRESULT CALLBACK _WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM 
       {
          PAINTSTRUCT ps;
          HDC dc = ::BeginPaint(hWnd, &ps);
-         do_draw(hWnd, dc);
          ::EndPaint(hWnd, &ps);
       }
       break;
    case WM_SIZE: 
       {
-         g_tb.sizing = true;
          do_size(hWnd, LOWORD(lParam), HIWORD(lParam));
-         //::InvalidateRect(hWnd, NULL, TRUE);
       }
       break;
    case WM_DESTROY:
@@ -667,70 +451,31 @@ static LRESULT CALLBACK _WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM 
          }
       }
       break;
-   case WM_LBUTTONDOWN:
-      {
-         ::ShowWindow(g_tb.zoom_bar, SW_HIDE);
-         ::EnableWindow(g_tb.btns[0].hw(), 1);
-         if (g_tb.bigger) {
-            //::SetCursor(::LoadCursor(NULL, MAKEINTRESOURCE(IDC_PNG_DRAGHAND)));
-            g_tb.last_pt.x = GET_X_LPARAM(lParam);
-            g_tb.last_pt.y = GET_Y_LPARAM(lParam);
-         } else {
-            ::SetCursor(::LoadCursor(NULL, MAKEINTRESOURCE(IDC_ARROW)));
-         }
-      }
-      break;
-   case WM_MOUSEMOVE:
-      {
-         if (g_tb.bigger) {
-            //::SetCursor(::LoadCursor(NULL, MAKEINTRESOURCE(IDC_PNG_HAND)));
-            if (MK_LBUTTON == wParam) {
-               g_tb.dragging = true;
-               int x = GET_X_LPARAM(lParam);
-               int y = GET_Y_LPARAM(lParam);
-               g_tb.new_pt.x += x - g_tb.last_pt.x; 
-               g_tb.new_pt.y += y - g_tb.last_pt.y;
-               g_tb.last_pt.x = x;
-               g_tb.last_pt.y = y;
-               re_draw(hWnd);
-            }
-         } else {
-            ::SetCursor(::LoadCursor(NULL, MAKEINTRESOURCE(IDC_ARROW)));
-         }
-      }
-      break;
-   case WM_LBUTTONUP:
-      {
-         g_tb.dragging = false;
-      }
-      break;
    case WM_ERASEBKGND:
       break;
    case WM_KEYDOWN:
       {
          if (wParam == VK_ESCAPE) {
             g_tb.slider_show = false;
-            g_tb.fit = true;
-            g_tb.ori = false;
             ::ShowWindow(g_tb.tb, SW_SHOW);
+            ::SetWindowPlacement(hWnd, &g_tb.wp);
             ::InvalidateRect(g_tb.tb, 0, TRUE);
          }
       }
       break;
-   case WM_VSCROLL:
+   case WM_NOTIFY:
       {
-         if ((HWND)lParam != g_tb.zoom_bar) {
+         switch (((LPNMHDR)lParam)->code) {
+         case NM_RELEASEDCAPTURE:
+            {
+               ::ShowWindow(g_tb.btns[0].hw(), SW_SHOW);
+               ::ShowWindow(g_tb.zoom_bar0, SW_HIDE);
+               ::EnableWindow(g_tb.img.hw(), TRUE);
+               ::InvalidateRect(g_tb.tb, 0, TRUE);
+               ::ReleaseCapture(); 
+            }
             break;
          }
-         int newPos = SendMessage(g_tb.zoom_bar, TBM_GETPOS, 0, 0);
-         g_tb.zoom = 11 - newPos;
-         ::InvalidateRect(hWnd, 0, true);
-         if (LOWORD(wParam) > 4) {
-            break;
-         }
-         ::ShowWindow(g_tb.zoom_bar, SW_HIDE);
-         ::EnableWindow(g_tb.btns[0].hw(), 1);
-         g_tb.zooming = true;
       }
       break;
    case WM_GETMINMAXINFO:
@@ -740,18 +485,6 @@ static LRESULT CALLBACK _WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM 
          mm->ptMinTrackSize.y = 500;
       }
       break;
-   //case WM_CTLCOLORSTATIC:
-   //   {
-   //      if (g_tb.tb == (HWND)lParam) {
-   //         HDC dc = (HDC)wParam;
-   //         ::SetBkColor(dc, RGB(192, 192, 192));
-   //         if (g_tb.hbr == 0) {
-   //            g_tb.hbr = ::CreateSolidBrush(RGB(192, 192, 192));
-   //         }
-   //         return (INT_PTR)g_tb.hbr;
-   //      }
-   //   }
-   //   break;
 	default:
 		return DefWindowProc(hWnd, message, wParam, lParam);
 	}
@@ -789,6 +522,7 @@ int PicEx::Init(HWND pw, HINSTANCE hinst, unzFile uf) {
    if (this->opened_) {
       delete this->img_.img;
       this->img_.img = 0;
+      g_tb.img.SetImg(0);
       ::GlobalFree(this->img_.hg);
       this->img_.hg = 0;
       return 0;
@@ -826,7 +560,12 @@ void PicEx::hide() {
 void PicEx::set_img(node* n, image img) {
    this->img_ = img;
    this->n_ = n;
-   ::InvalidateRect(this->hw_, NULL, TRUE);
+   g_tb.img.SetImg(img.img);
+   g_tb.status = FIT;
+   RECT rc;
+   ::GetClientRect(this->hw_, &rc);
+   g_tb.img.Show(g_tb.status);
+   //::InvalidateRect(this->hw_, NULL, TRUE);
 }
 
 
