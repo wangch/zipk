@@ -296,8 +296,8 @@ static void do_stcdraw(HWND hWnd, HDC dc) {
 
    g->SetSmoothingMode(Gdiplus::SmoothingModeAntiAlias);
    Gdiplus::GraphicsPath path;
-   path.AddArc((w-bar_w)/2, 15, 33, 32, -240, 120);
-   path.AddArc((w+bar_w)/2, 15, 33, 32, -60, 120);
+   path.AddArc((w-bar_w)/2-16, 15, 33, 32, -240, 120);
+   path.AddArc((w+bar_w)/2-16, 15, 33, 32, -60, 120);
    path.CloseFigure();
 
    Gdiplus::Pen pen(line_color, 1);
@@ -320,7 +320,7 @@ static LRESULT CALLBACK _zoom_proc(HWND hWnd, UINT message, WPARAM wParam, LPARA
       if (MK_LBUTTON == wParam) {
          int y = GET_Y_LPARAM(lParam);
          int pos = SendMessage(g_tb.zoom_bar0, TBM_GETPOS, 0, 0);
-         int newpos = y / 20;
+         int newpos = y / 16;
          ::SendMessage(hWnd, TBM_SETPOS, TRUE, newpos);
          if (pos != newpos) {
             g_tb.zoom = 11 - newpos;
@@ -407,7 +407,7 @@ static void do_size(HWND hw, int w, int h) {
    ::InvalidateRect(g_tb.tb, NULL, FALSE);
 
    int btn_top = 16+3;
-   int w0 = (w-340)/2+20;
+   int w0 = (w-340)/2;
    g_tb.btns[0].Show(w0, btn_top, 37, 26);
    g_tb.btns[1].Show(w0+57, btn_top, 27, 26);
    g_tb.btns[2].Show(w0+57+47, btn_top, 53, 26);
@@ -416,8 +416,8 @@ static void do_size(HWND hw, int w, int h) {
    g_tb.btns[5].Show(w0+57+47+53+42+72, btn_top, 25, 26);
    g_tb.btns[6].Show(w0+57+47+53+42+72+45, btn_top, 25, 26);
 
-   ::MoveWindow(g_tb.zoom_bar0, w0, h-16-200, 30, 200, FALSE);
-   ::MoveWindow(g_tb.zoom_bar, 0, 0, 30, 200, FALSE);
+   ::MoveWindow(g_tb.zoom_bar0, w0, h-16-160, 30, 160, FALSE);
+   ::MoveWindow(g_tb.zoom_bar, 0, 0, 30, 160, FALSE);
 }
 
 static LRESULT CALLBACK _WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) {
@@ -438,6 +438,10 @@ static LRESULT CALLBACK _WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM 
       {
          PicEx* pe = (PicEx*)::GetWindowLongPtr(hWnd, GWLP_USERDATA);
          if (pe) {
+            if (g_tb.slider_show) {
+               g_tb.slider_show = false;
+               ::Sleep(2*1000);
+            }
             delete pe->img_.img;
             ::GlobalFree(pe->img_.hg);
             pe->img_.img = 0;

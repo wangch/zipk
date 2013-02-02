@@ -101,7 +101,7 @@ static void drag_rc(Gdiplus::Rect& rc, int& dx, int& dy, int w, int h) {
 Gdiplus::Rect ImageCtrl::get_rc(int w, int h) {
    int s = this->status_;
    Gdiplus::Rect rc;
-   if (s == FIT) {
+   if (s == FIT || s == SLIDER) {
       this->dx_ = 0;
       this->dy_ = 0;
       rc = fit_rc(w, h, this->img_);
