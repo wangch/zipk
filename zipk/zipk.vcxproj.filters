@@ -38,6 +38,9 @@
     <ClInclude Include="ShowStyle.h">
       <Filter>zpik</Filter>
     </ClInclude>
+    <ClInclude Include="image.h">
+      <Filter>zpik</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
@@ -107,6 +110,9 @@
       <Filter>miniunzip</Filter>
     </ClCompile>
     <ClCompile Include="ShowStyle.cpp">
+      <Filter>zpik</Filter>
+    </ClCompile>
+    <ClCompile Include="image.cc">
       <Filter>zpik</Filter>
     </ClCompile>
   </ItemGroup>

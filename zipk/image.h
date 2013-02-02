@@ -26,9 +26,10 @@ public:
    Gdiplus::Rect rc() { return rc_; }
    Gdiplus::Image* img() { return img_; }
    HWND hw() { return hw_; }
-   void set_cs(HANDLE m) { m_ = m; }
 private:
-   void draw(HDC dc);
+   void re_draw(PAINTSTRUCT* ps);
+   void do_size(int w, int h);
+   void do_draw(int w, int h);
    Gdiplus::Rect get_rc(int w, int h);
 private:
    HWND hw_;
@@ -41,7 +42,8 @@ private:
    bool bigger_;
    int dx_, dy_;
    int px_, py_;
-   HANDLE m_;
+   bool draging_;
+   HDC memdc_;
 };
 
 Gdiplus::Rect fit_rc(int w, int h, Gdiplus::Image* img);

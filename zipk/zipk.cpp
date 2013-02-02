@@ -571,13 +571,13 @@ static int init(HWND pw) {
 
 static void open_exp(node* n, int x, int y, int w, int h) {
    g_lv.pe.Init(NULL, hInst, g_lv.unz);
-   g_lv.pe.show(x, y, w, h);
    image img = unzip_img(n, g_lv.unz);
    if (img.img) {
       g_lv.pe.set_img(n, img);
    } else {
       ::MessageBox(0, L"错误", L"错误", 0);
    }
+   g_lv.pe.show(x, y, w, h);
 }
 
 int GetEncoderClsid(const WCHAR* format, CLSID* pClsid)

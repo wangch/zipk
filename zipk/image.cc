@@ -9,7 +9,7 @@
 #include <Windowsx.h>
 
 
-ImageCtrl ::ImageCtrl() : img_(0), status_(false), bigger_(false), dx_(0), dy_(0) {
+ImageCtrl ::ImageCtrl() : img_(0), status_(false), bigger_(false), dx_(0), dy_(0), draging_(false) {
 }
 
 ImageCtrl ::~ImageCtrl() {
@@ -127,40 +127,64 @@ void ImageCtrl::Show(int s, int zoom) {
 
    this->status_ = s;
    this->zoom_ = zoom;
-   ::InvalidateRect(this->hw_, 0, TRUE);
+   do_draw(0, 0);
 }
 
-void ImageCtrl::draw(HDC dc) {
-   RECT rc;
-   ::GetClientRect(this->hw_, &rc);
-   int x = rc.left;
-   int y = rc.top;
-   int w = rc.right - rc.left;
-   int h = rc.bottom - rc.top;
-
-   HBITMAP memmap = ::CreateCompatibleBitmap(dc, w, h);
+void ImageCtrl::do_size(int w, int h) {
+   HDC dc = ::GetDC(this->hw_);
    HDC mdc = ::CreateCompatibleDC(dc); 
+   ::DeleteDC(this->memdc_);
+   this->memdc_ = mdc;
+   this->do_draw(w, h);
+}
+
+void ImageCtrl::do_draw(int w, int h) {
+   if (w == 0) {
+      RECT rc;
+      ::GetClientRect(this->hw_, &rc);
+      w = rc.right - rc.left;
+      h = rc.bottom - rc.top;
+   }
+   HDC dc = ::GetDC(this->hw_);
+   HBITMAP memmap = ::CreateCompatibleBitmap(dc, w, h);
+   HDC mdc = this->memdc_; 
    HBITMAP oldmap = (HBITMAP)::SelectObject(mdc, (HGDIOBJ)memmap);
+
    Gdiplus::Graphics g(mdc);
    Gdiplus::SolidBrush br(Gdiplus::Color::White);
-   g.FillRectangle(&br, x, y, w, h);
+   g.FillRectangle(&br, 0, 0, w, h);
 
-   ::WaitForSingleObject(this->m_, INFINITE);
    if (this->img_) {
       g.DrawImage(this->img_, get_rc(w, h));
       if (this->status_ == SLIDER) {
-         MagicShow(mdc, x, y, dc, x, y, w, h, 10, 19, ::rand()%19);
+         MagicShow(mdc, 0, 0, dc, 0, 0, w, h, 10, 19, ::rand()%19);
       }
    }
-   ::SetEvent(this->m_);
-
-   BitBlt(dc, 
-      x, y, w, h, 
-      mdc, x, y, SRCCOPY);
-
+   
    ::SelectObject(mdc, oldmap);
    ::DeleteObject(memmap); 
-   ::DeleteDC(mdc);
+   if (!this->draging_) {
+      ::InvalidateRect(this->hw_, 0, FALSE);
+   }
+}
+
+void ImageCtrl::re_draw(PAINTSTRUCT* ps) {
+   RECT rc;
+   ::GetClientRect(this->hw_, &rc);
+   int w = rc.right - rc.left;
+   int h = rc.bottom - rc.top;
+
+   if (this->draging_) {
+      this->do_draw(0, 0);
+      this->draging_ = false;
+   }
+   HDC dc = ps->hdc;
+   rc = ps->rcPaint;
+   int x = rc.left;
+   int y = rc.top;
+   BitBlt(dc, 
+      x, y, rc.right-x, rc.bottom-y, 
+      this->memdc_, x, y, SRCCOPY);
 }
 
 static LRESULT CALLBACK _WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) {
@@ -177,8 +201,13 @@ LRESULT CALLBACK ImageCtrl::WndProc(HWND hWnd, UINT message, WPARAM wParam, LPAR
       {
          PAINTSTRUCT ps;
          HDC dc = ::BeginPaint(hWnd, &ps);
-         this->draw(dc);
+         this->re_draw(&ps);
          ::EndPaint(hWnd, &ps);
+      }
+      break;
+   case WM_SIZE:
+      {
+         this->do_size(LOWORD(lParam), HIWORD(lParam));
       }
       break;
    case WM_LBUTTONDOWN:
@@ -199,7 +228,8 @@ LRESULT CALLBACK ImageCtrl::WndProc(HWND hWnd, UINT message, WPARAM wParam, LPAR
                this->dy_ += y - this->py_; 
                this->px_ = x;
                this->py_ = y;
-               ::InvalidateRect(this->hw_, 0, TRUE);
+               this->draging_ = true;
+               ::InvalidateRect(this->hw_, 0, FALSE);
             }
          } else {
             ::SetCursor(::LoadCursor(NULL, MAKEINTRESOURCE(IDC_ARROW)));
@@ -230,7 +260,7 @@ void ImageCtrl::Init(HWND pw, HINSTANCE hinst) {
 
 void ImageCtrl::SetImg(Gdiplus::Image* img) {
    this->img_ = img;
-   ::InvalidateRect(this->hw_, 0, TRUE);
+   this->do_draw(0, 0);
 }
 
 void ImageCtrl::RotateFlip90() {
@@ -238,7 +268,7 @@ void ImageCtrl::RotateFlip90() {
       return;
    }
    this->img_->RotateFlip(Gdiplus::Rotate90FlipNone);
-   ::InvalidateRect(this->hw_, 0, TRUE);
+   this->do_draw(0, 0);
 }
 
 void ImageCtrl::RotateFlip270() {
@@ -246,6 +276,6 @@ void ImageCtrl::RotateFlip270() {
       return;
    }
    this->img_->RotateFlip(Gdiplus::Rotate270FlipNone);
-   ::InvalidateRect(this->hw_, 0, TRUE);
+   this->do_draw(0, 0);
 }
 
