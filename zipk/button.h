@@ -51,8 +51,8 @@ public:
 
    LRESULT CALLBACK WndProc(UINT message, WPARAM wParam, LPARAM lParam);
 private:
-   void draw(HDC dc);
-   void re_draw();
+   void draw(int w, int h);
+   void re_draw(RECT rc, HDC dc);
 private:
    HWND hw_;
    int id_;
@@ -67,6 +67,7 @@ private:
    Gdiplus::Rect rc_;
    WNDPROC btn_proc_;
    int statuse_;
+   HDC mdc_;
 };
 
 #endif

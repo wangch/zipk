@@ -118,8 +118,9 @@ static bool split_path(const std::wstring& path, std::vector<std::wstring>& path
 struct LV {
    LV() : root(0), sort(false) {}
    HWND pw;
-   HWND toolbar;
+   HWND tbar;
    HWND lv;
+   HWND bbar;
    Gdiplus::Font* f;
    Gdiplus::Font* f1;
    bool moving;
@@ -131,6 +132,10 @@ struct LV {
    int il_index[3];
    HIMAGELIST il;
    bool sort;
+   Gdiplus::Image* bgs[5];
+   WNDPROC tbar_proc;
+   WNDPROC bbar_proc;
+   HDC memdc1, memdc2;
 } g_lv;
 
 node::~node() {
@@ -488,42 +493,200 @@ static int btn_click3(Button* btn) {
    return 0;
 }
 
+static Gdiplus::Image* bkimg(int rcid) {
+   HRSRC hrsc = ::FindResource(hInst, MAKEINTRESOURCE(rcid), TEXT("PNG"));
+   DWORD size = ::SizeofResource(hInst, hrsc);
+   LPVOID hg = ::LoadResource(hInst, hrsc);
+   HGLOBAL mem = ::GlobalAlloc(GMEM_MOVEABLE, size);
+   Gdiplus::Image* img = 0;
+   if (mem) {
+      LPVOID pmem = ::GlobalLock(mem);
+      if (pmem) {
+         ::CopyMemory(pmem, hg, size);
+         LPSTREAM is;
+         if (::CreateStreamOnHGlobal(pmem, FALSE, &is) == S_OK) {
+            Gdiplus::Image* m = new Gdiplus::Image(is);
+            is->Release();
+            if (m->GetLastStatus() != Gdiplus::Ok) {
+               delete m;
+               return img;
+            }
+            img = m;
+         }
+         ::GlobalUnlock(mem);
+      }
+      ::GlobalFree(mem);
+   }
+   return img;
+}
+
+static void do_tbardraw(HWND hWnd, int w, int h) {
+   HDC dc = ::GetDC(hWnd);
+   HBITMAP memmap = ::CreateCompatibleBitmap(dc, w, h);
+   HDC mdc = ::CreateCompatibleDC(dc); 
+   HBITMAP oldmap = (HBITMAP)::SelectObject(mdc, (HGDIOBJ)memmap);
+
+   Gdiplus::Graphics g(mdc);
+
+   Gdiplus::SolidBrush br(Gdiplus::Color::White);
+   g.FillRectangle(&br, 0, 0, w, h);
+
+   int tw0 = 160;
+   g.DrawImage(g_lv.bgs[0], 0, 0, w, h);
+   g.DrawImage(g_lv.bgs[4], w-tw0, 0, tw0+8, h);
+
+   ::DeleteObject(memmap);
+   ::DeleteDC(g_lv.memdc1);
+   g_lv.memdc1 = mdc;
+}
+
+static void re_tbardraw(RECT rc, HDC dc) {
+   int x = rc.left;
+   int y = rc.top;
+   int w = rc.right - rc.left;
+   int h = rc.bottom - rc.top;
+    
+   BitBlt(dc, 
+      x, y, w, h, 
+      g_lv.memdc1, x, y, SRCCOPY);
+}
+
+static void do_tbarsize(HWND hw, int w, int h) {
+   do_tbardraw(hw, w, h);
+   int btn_top = 15;
+   int w0 = 16;
+
+   g_lv.btns[0].Show(w0, btn_top, 60, 22);
+   g_lv.btns[1].Show(w0+80, btn_top, 60, 22);
+   g_lv.btns[2].Show(w0+80+80, btn_top, 60, 22);
+   g_lv.btns[3].Show(w0+80+80+80, btn_top, 60, 22);
+   ::InvalidateRect(hw, NULL, 0);
+};
+
+static LRESULT CALLBACK _tbar_proc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) {
+   if (message == WM_PAINT) {
+      PAINTSTRUCT ps;
+      HDC dc = ::BeginPaint(hWnd, &ps);
+      re_tbardraw(ps.rcPaint, dc);
+      ::EndPaint(hWnd, &ps);
+      return 0;
+   }
+   if (message == WM_SIZE) {
+      do_tbarsize(hWnd, LOWORD(lParam), HIWORD(lParam));
+   }
+   if (message == WM_ERASEBKGND) {
+      return 0;
+   }
+   return ::CallWindowProc(g_lv.tbar_proc, hWnd, message, wParam, lParam);
+}
+
+static void do_bbardraw(HWND hWnd, int w, int h) {
+   HDC dc = ::GetDC(hWnd);
+   HBITMAP memmap = ::CreateCompatibleBitmap(dc, w, h);
+   HDC mdc = ::CreateCompatibleDC(dc); 
+   HBITMAP oldmap = (HBITMAP)::SelectObject(mdc, (HGDIOBJ)memmap);
+
+   Gdiplus::Graphics g(mdc);
+
+   Gdiplus::SolidBrush br(Gdiplus::Color::White);
+   br.SetColor(Gdiplus::Color(255, 140, 1));
+
+   int bh0 = 24;
+   int bw0 = 160;
+   g.FillRectangle(&br, 0, 0, w-bw0-bh0, h); // 底部黄色
+   g.DrawImage(g_lv.bgs[2], w-bw0-24, 0, 24, h);
+   g.DrawImage(g_lv.bgs[3], w-bw0-2, 0, bw0+8, h);
+
+   ::DeleteObject(memmap);
+   ::DeleteDC(g_lv.memdc2);
+   g_lv.memdc2 = mdc;
+}
+
+static void re_bbardraw(RECT rc, HDC dc) {
+   int x = rc.left;
+   int y = rc.top;
+   int w = rc.right - rc.left;
+   int h = rc.bottom - rc.top;
+    
+   BitBlt(dc, 
+      x, y, w, h, 
+      g_lv.memdc2, x, y, SRCCOPY);
+}
+
+static void do_bbarsize(HWND hw, int w, int h) {
+   do_bbardraw(hw, w, h);
+   ::InvalidateRect(hw, NULL, 0);
+};
+
+static LRESULT CALLBACK _bbar_proc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) {
+   if (message == WM_PAINT) {
+      PAINTSTRUCT ps;
+      HDC dc = ::BeginPaint(hWnd, &ps);
+      re_bbardraw(ps.rcPaint, dc);
+      ::EndPaint(hWnd, &ps);
+      return 0;
+   }
+   if (message == WM_SIZE) {
+      do_bbarsize(hWnd, LOWORD(lParam), HIWORD(lParam));
+   }
+   if (message == WM_ERASEBKGND) {
+      return 0;
+   }
+   return ::CallWindowProc(g_lv.bbar_proc, hWnd, message, wParam, lParam);
+}
+
+
 static int init(HWND pw) {
    InitCommonControls();
+
+   HWND hw = ::CreateWindowEx(0, WC_STATIC, L"",
+      WS_CHILD | WS_VISIBLE, 
+      0, 0, 0, 0,
+      pw, (HMENU)IDC_STATIC, hInst, NULL);
+   if (!hw) {
+      return -1;
+   }
+   g_lv.tbar =  hw;
+   g_lv.tbar_proc = (WNDPROC)::SetWindowLongPtr(hw, GWLP_WNDPROC, (LONG)_tbar_proc);
 
    Gdiplus::FontFamily ff(L"宋体");
    Gdiplus::Font* f = new Gdiplus::Font(&ff, 9);
    Gdiplus::Font* f1 = new Gdiplus::Font(&ff, 12, 4);
 
-   g_lv.btns[0].Init(0, pw, hInst, 0, btn_click0);
-   g_lv.btns[1].Init(1, pw, hInst, 0, btn_click1);
-   g_lv.btns[2].Init(2, pw, hInst, 0, btn_click2);
-   g_lv.btns[3].Init(3, pw, hInst, 0, btn_click3);
+   g_lv.btns[0].Init(0, hw, hInst, 0, btn_click0);
+   g_lv.btns[1].Init(1, hw, hInst, 0, btn_click1);
+   g_lv.btns[2].Init(2, hw, hInst, 0, btn_click2);
+   g_lv.btns[3].Init(3, hw, hInst, 0, btn_click3);
            
    g_lv.btns[0].SetTxtFont(f);
    g_lv.btns[1].SetTxtFont(f);
    g_lv.btns[2].SetTxtFont(f);
    g_lv.btns[3].SetTxtFont(f);
 
-   g_lv.btns[0].SetBkColor(Gdiplus::Color((69+96)/2, (110+141)/2, (149+198)/2));
-   g_lv.btns[1].SetBkColor(Gdiplus::Color((69+96)/2, (110+141)/2, (149+198)/2));
-   g_lv.btns[2].SetBkColor(Gdiplus::Color((69+96)/2, (110+141)/2, (149+198)/2));
-   g_lv.btns[3].SetBkColor(Gdiplus::Color((69+96)/2, (110+141)/2, (149+198)/2));
+   g_lv.btns[0].SetBkColor(Gdiplus::Color(78, 78, 78));
+   g_lv.btns[1].SetBkColor(Gdiplus::Color(78, 78, 78));
+   g_lv.btns[2].SetBkColor(Gdiplus::Color(78, 78, 78));
+   g_lv.btns[3].SetBkColor(Gdiplus::Color(78, 78, 78));
            
-   g_lv.btns[0].SetImg(L"res\\folder.png", 0, 0, 0, 24, 24);
-   g_lv.btns[1].SetImg(L"res\\up.png", 0, 0, 0, 24, 24);
-   g_lv.btns[2].SetImg(L"res\\home.png", 0, 0, 0, 24, 24);
-   g_lv.btns[3].SetImg(L"res\\group.png", 0, 0, 0, 24, 24);
-
-   g_lv.btns[0].SetImg(L"res\\folder.png", 1, 0, 0, 24, 24);
-   g_lv.btns[1].SetImg(L"res\\up.png", 1, 0, 0, 24, 24);
-   g_lv.btns[2].SetImg(L"res\\home.png", 1, 0, 0, 24, 24);
-   g_lv.btns[3].SetImg(L"res\\group.png", 1, 0, 0, 24, 24);
-
-   //g_lv.btns[0].SetImg(L"res\\folder.png", 2, 0, 0, 24, 24);
-   //g_lv.btns[1].SetImg(L"res\\up.png", 2, 0, 0, 24, 24);
-   //g_lv.btns[2].SetImg(L"res\\home.png", 2, 0, 0, 24, 24);
-   //g_lv.btns[3].SetImg(L"res\\group.png", 2, 0, 0, 24, 24);
+   g_lv.btns[0].SetImg(hInst, IDB_PNG_BTN1, 0, 0, 0, 24, 20);
+   g_lv.btns[0].SetImg(hInst, IDB_PNG_BTN1, 1, 0, 0, 24, 20);
+   g_lv.btns[0].SetImg(hInst, IDB_PNG_BTN1, 2, 0, 0, 24, 20);
+                                                          
+   g_lv.btns[1].SetImg(hInst, IDB_PNG_BTN2, 0, 0, 0, 24, 20);
+   g_lv.btns[1].SetImg(hInst, IDB_PNG_BTN2, 1, 0, 0, 24, 20);
+   g_lv.btns[1].SetImg(hInst, IDB_PNG_BTN2, 2, 0, 0, 24, 20);
+                                                          
+   g_lv.btns[2].SetImg(hInst, IDB_PNG_BTN3, 0, 0, 0, 24, 20);
+   g_lv.btns[2].SetImg(hInst, IDB_PNG_BTN3, 1, 0, 0, 24, 20);
+   g_lv.btns[2].SetImg(hInst, IDB_PNG_BTN3, 2, 0, 0, 24, 20);
+                                                          
+   g_lv.btns[3].SetImg(hInst, IDB_PNG_BTN4, 0, 0, 0, 24, 20);
+   g_lv.btns[3].SetImg(hInst, IDB_PNG_BTN4, 1, 0, 0, 24, 20);
+   g_lv.btns[3].SetImg(hInst, IDB_PNG_BTN4, 2, 0, 0, 24, 20);
+   
+   for (int i = 0; i < 5; ++i) {
+      g_lv.bgs[i] = bkimg(i+IDB_PNG_BG1);
+   }
 
    g_lv.btns[0].SetText(L"打開", 30, 6);
    g_lv.btns[1].SetText(L"向上", 30, 6);
@@ -535,13 +698,24 @@ static int init(HWND pw) {
    g_lv.f1 = f1;
    g_lv.moving = false;
 
-   HWND hw = ::CreateWindowEx(LVS_EX_DOUBLEBUFFER, WC_LISTVIEW, TEXT(""),
-      WS_CHILD | WS_VISIBLE | LVS_ALIGNTOP, 
+   hw = ::CreateWindowEx(0, WC_LISTVIEW, TEXT(""),
+      WS_CHILD | WS_VISIBLE | LVS_ALIGNTOP | LVS_EX_DOUBLEBUFFER,
       18, 84, 400, 225, pw, (HMENU)IDC_TV, hInst, 0);
    if (!hw) {
       return -1;
    }
    g_lv.lv = hw;
+   SendMessage(hw, LVM_SETEXTENDEDLISTVIEWSTYLE, LVS_EX_DOUBLEBUFFER, LVS_EX_DOUBLEBUFFER);
+
+   hw = ::CreateWindowEx(0, WC_STATIC, L"",
+      WS_CHILD | WS_VISIBLE, 
+      0, 0, 0, 0,
+      pw, (HMENU)IDC_STATIC, hInst, NULL);
+   if (!hw) {
+      return -1;
+   }
+   g_lv.bbar =  hw;
+   g_lv.bbar_proc = (WNDPROC)::SetWindowLongPtr(hw, GWLP_WNDPROC, (LONG)_bbar_proc);
 
    SHFILEINFO si;
    HIMAGELIST il = (HIMAGELIST)::SHGetFileInfo(L"", 0, &si, sizeof(si), SHGFI_SYSICONINDEX | SHGFI_SMALLICON);
@@ -567,7 +741,6 @@ static int init(HWND pw) {
    }
    return 0;
 }
-
 
 static void open_exp(node* n, int x, int y, int w, int h) {
    g_lv.pe.Init(NULL, hInst, g_lv.unz);
@@ -611,60 +784,10 @@ int GetEncoderClsid(const WCHAR* format, CLSID* pClsid)
    return -1;  // Failure
 }
 
-static void do_draw(HWND hWnd, HDC dc) {
-   RECT rc;
-   ::GetClientRect(hWnd, &rc);
-   int x = rc.left;
-   int y = rc.top;
-   int w = rc.right - rc.left;
-   int h = rc.bottom - rc.top;
-
-   HBITMAP memmap = ::CreateCompatibleBitmap(dc, w, h);
-   HDC mdc = ::CreateCompatibleDC(dc); 
-   HBITMAP oldmap = (HBITMAP)::SelectObject(mdc, (HGDIOBJ)memmap);
-
-   Gdiplus::Graphics* g = new Gdiplus::Graphics(mdc);
-
-   Gdiplus::Rect grc(x, y, w, h);
-   Gdiplus::LinearGradientBrush lbr(grc, 
-      Gdiplus::Color(69, 110, 149), Gdiplus::Color(96, 141, 198), 0);
-   g->FillRectangle(&lbr, x, y, w, h);
-
-   int top_h = 64;
-   int bar_h = 32;
-   int bar_w = 375;
-
-   g->SetSmoothingMode(Gdiplus::SmoothingModeAntiAlias);
-   Gdiplus::GraphicsPath path;
-   path.AddArc(60, (top_h-bar_h)/2, 33, 32, -240, 120);
-   path.AddArc((60+bar_w), (top_h-bar_h)/2, 33, 32, -60, 120);
-   path.CloseFigure();
-
-   Gdiplus::Color line_color(133, 144, 160);
-   Gdiplus::Pen pen(line_color, 1);
-   Gdiplus::SolidBrush sbr(Gdiplus::Color((69+96)/2, (110+141)/2, (149+198)/2));
-   g->DrawPath(&pen, &path);
-   g->FillPath(&sbr, &path);
-
-   BitBlt(dc, 
-      x, y, w, h, 
-      mdc, x, y, SRCCOPY);
-   delete g;
-   ::SelectObject(mdc, oldmap);
-   ::DeleteObject(memmap); 
-   ::DeleteDC(mdc);
-}
-
-static void do_size(int w, int h) {
-   ::MoveWindow(g_lv.lv, 18, 84, w - 18, h-102, TRUE);
-
-   int btn_top = 16+3;
-   int w0 = 100;
-
-   g_lv.btns[0].Show(w0, btn_top, 60, 26);
-   g_lv.btns[1].Show(w0+80, btn_top, 60, 26);
-   g_lv.btns[2].Show(w0+80+80, btn_top, 60, 26);
-   g_lv.btns[3].Show(w0+80+80+80, btn_top, 60, 26);
+static void do_size(HWND hw, int w, int h) {
+   ::MoveWindow(g_lv.tbar, 0, 0, w, 48, TRUE);
+   ::MoveWindow(g_lv.lv, 0, 48, w, h-72, TRUE);
+   ::MoveWindow(g_lv.bbar, 0, h-24, w, 24, TRUE);
 };
 
 static void do_mm(int x, int y) {
@@ -815,13 +938,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	case WM_PAINT:
 		hdc = BeginPaint(hWnd, &ps);
 		// TODO: 在此添加任意绘图代码...
-      do_draw(hWnd, hdc);
+      // re_draw(ps.rcPaint, hdc);
 		EndPaint(hWnd, &ps);
 		break;
-   case WM_LBUTTONDBLCLK:
-      {
-      }
-      break;
    case WM_NOTIFY:
       {
          switch (((LPNMHDR)lParam)->code) {
@@ -855,10 +974,16 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
       }
       break;
    case WM_SIZE:
-      do_size(LOWORD(lParam), HIWORD(lParam));
-      ::InvalidateRect(hWnd, NULL, 1);
+      do_size(hWnd, LOWORD(lParam), HIWORD(lParam));
       break;
    case WM_ERASEBKGND:
+      break;
+   case WM_GETMINMAXINFO:
+      {
+         LPMINMAXINFO mm = (LPMINMAXINFO)lParam;
+         mm->ptMinTrackSize.x = 640;
+         mm->ptMinTrackSize.y = 480;
+      }
       break;
 	case WM_DESTROY:
 		PostQuitMessage(0);

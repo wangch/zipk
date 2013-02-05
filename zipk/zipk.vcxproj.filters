@@ -197,5 +197,32 @@
     <Image Include="res\zoom1.png">
       <Filter>resource</Filter>
     </Image>
+    <Image Include="res\bg1.png">
+      <Filter>resource</Filter>
+    </Image>
+    <Image Include="res\bg2.png">
+      <Filter>resource</Filter>
+    </Image>
+    <Image Include="res\bg3.png">
+      <Filter>resource</Filter>
+    </Image>
+    <Image Include="res\bg4.png">
+      <Filter>resource</Filter>
+    </Image>
+    <Image Include="res\bg5.png">
+      <Filter>resource</Filter>
+    </Image>
+    <Image Include="res\folder.png">
+      <Filter>resource</Filter>
+    </Image>
+    <Image Include="res\group.png">
+      <Filter>resource</Filter>
+    </Image>
+    <Image Include="res\home.png">
+      <Filter>resource</Filter>
+    </Image>
+    <Image Include="res\up.png">
+      <Filter>resource</Filter>
+    </Image>
   </ItemGroup>
 </Project>

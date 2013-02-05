@@ -23,21 +23,23 @@ static LRESULT CALLBACK _btnProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM 
    return btn->WndProc(message, wParam, lParam);
 }
 
-void Button::draw(HDC dc) {
-   RECT rc;
-   ::GetClientRect(this->hw_, &rc);
-   int x = rc.left;
-   int y = rc.top;
-   int w = rc.right - rc.left - 1;
-   int h = rc.bottom - rc.top - 1;
-
+void Button::draw(int w, int h) {
+   if (w == 0) {
+      RECT rc; 
+      ::GetClientRect(this->hw_, &rc);
+      int x = rc.left;
+      int y = rc.top;
+      w = rc.right - x;
+      h = rc.bottom - y;
+   }
+   HDC dc = ::GetDC(this->hw_);
    HBITMAP memmap = ::CreateCompatibleBitmap(dc, w, h);
    HDC mdc = ::CreateCompatibleDC(dc); 
    HBITMAP oldmap = (HBITMAP)::SelectObject(mdc, (HGDIOBJ)memmap);
    Gdiplus::Graphics* g = new Gdiplus::Graphics(mdc);
 
    Gdiplus::SolidBrush br(this->bk_color_);
-   g->FillRectangle(&br, x, y, w, h);
+   g->FillRectangle(&br, 0, 0, w, h);
 
    if (!this->imgs_.empty()) {
       img_info img = this->imgs_[this->statuse_];
@@ -64,20 +66,22 @@ void Button::draw(HDC dc) {
       g->DrawString(this->txt_.txt.c_str(), this->txt_.txt.length(), this->txt_.font, pt, &sbr);
    }
 
-   BitBlt(dc, 
-      x, y, w, h, 
-      mdc, x, y, SRCCOPY);
 
    delete g;
-   ::SelectObject(mdc, oldmap);
-   ::DeleteObject(memmap); 
-   ::DeleteDC(mdc);
+   ::DeleteObject(memmap);
+   ::DeleteDC(this->mdc_);
+   this->mdc_ = mdc;
+   ::InvalidateRect(this->hw_, NULL, TRUE);
 }
 
-void Button::re_draw() {
-   RECT rc;
-   ::GetClientRect(this->hw_, &rc);
-   ::InvalidateRect(this->hw_, &rc, TRUE);
+void Button::re_draw(RECT rc, HDC dc) {
+   int x = rc.left;
+   int y = rc.top;
+   int w = rc.right - x;
+   int h = rc.bottom - y;
+   BitBlt(dc, 
+      x, y, w, h, 
+      this->mdc_, x, y, SRCCOPY);
 }
 
 LRESULT CALLBACK Button::WndProc(UINT message, WPARAM wParam, LPARAM lParam) {
@@ -86,48 +90,31 @@ LRESULT CALLBACK Button::WndProc(UINT message, WPARAM wParam, LPARAM lParam) {
       {
          PAINTSTRUCT ps;
          HDC dc = ::BeginPaint(this->hw_, &ps);
-         this->draw(dc);
+         this->re_draw(ps.rcPaint, dc);
          ::EndPaint(this->hw_, &ps);
       }
       break;
    case WM_SIZE: 
       {
-         this->re_draw();
+         this->draw(LOWORD(lParam), HIWORD(lParam));
       }
       break;
    case WM_LBUTTONDOWN:
-      /*
-      this->btn_down_ = true;
-      ::InvalidateRect(this->hw_, NULL, TRUE);
-      ::SetCapture(this->hw_);
-      */
       this->statuse_ = MLBTNDOWN;
-      this->re_draw();
+      this->draw(0, 0);
       if (this->fn1_) {
          fn1_(this);
       }
       break;
    case WM_LBUTTONUP:
-      /*
-      if (this->checkbox_) {
-         this->checked_ = !this->checked_;
-         this->btn_down_ = this->checked_;
-      } else {
-         this->btn_down_ = false;
-      }
-      ::InvalidateRect(this->hw_, NULL, TRUE);
-      ::ReleaseCapture();
-      //this->cw_->Notify(this->id_);
-      */
-      this->statuse_ = NORMAL;
-      this->re_draw();
+    this->statuse_ = NORMAL;
+      this->draw(0, 0);
       if (this->fn2_) {
          fn2_(this);
       }
       break;
    case WM_MOUSEMOVE:
       {
-        // this->statuse_ = MMOVING;
          ::SetCapture(this->hw_);
          POINT pt;
          pt.x = LOWORD(lParam);
@@ -142,11 +129,10 @@ LRESULT CALLBACK Button::WndProc(UINT message, WPARAM wParam, LPARAM lParam) {
                ::ReleaseCapture();
             }
          }
-         this->re_draw();
+         this->draw(0, 0);
       }
       break;
    case WM_MOUSELEAVE:
-      //this->moving_ = false;
       this->statuse_ = NORMAL;
       break;
    case WM_ERASEBKGND: 
@@ -159,7 +145,7 @@ LRESULT CALLBACK Button::WndProc(UINT message, WPARAM wParam, LPARAM lParam) {
 
 int Button::Init(int id, HWND pw, HINSTANCE hinst, int idc, btn_click fn1, btn_click fn2) {
    HWND hw = ::CreateWindowEx(0, WC_BUTTON, L"",
-      WS_CHILD | WS_VISIBLE | BS_CENTER | BS_FLAT | BS_OWNERDRAW, 
+      WS_CHILD | WS_VISIBLE | BS_CENTER | BS_FLAT/* | BS_OWNERDRAW*/, 
       0, 0, 0, 0,
       pw, (HMENU)idc, hinst, NULL);
    if (!hw) {
@@ -212,8 +198,8 @@ void Button::Show(int x, int y, int w, int h) {
    this->rc_.Y = y;
    this->rc_.Width = w;
    this->rc_.Height = h;
+   this->draw(w, h);
    ::ShowWindow(this->hw_, SW_SHOW);
-   this->re_draw();
 }
 
 void Button::Show(int x, int y) {

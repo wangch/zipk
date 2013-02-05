@@ -161,7 +161,6 @@ void ImageCtrl::do_draw(int w, int h) {
       }
    }
    
-   ::SelectObject(mdc, oldmap);
    ::DeleteObject(memmap); 
    if (!this->draging_) {
       ::InvalidateRect(this->hw_, 0, FALSE);
