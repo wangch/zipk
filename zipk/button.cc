@@ -8,7 +8,7 @@
 
 
 /// Button
-Button::Button() : statuse_(NORMAL) {
+Button::Button() : statuse_(NORMAL), hand_(false) {
 }
 
 Button::~Button() {
@@ -116,6 +116,9 @@ LRESULT CALLBACK Button::WndProc(UINT message, WPARAM wParam, LPARAM lParam) {
    case WM_MOUSEMOVE:
       {
          ::SetCapture(this->hw_);
+         if (this->hand_) {
+            ::SetCursor(::LoadCursor(NULL, MAKEINTRESOURCE(IDC_HAND))); 
+         }
          POINT pt;
          pt.x = LOWORD(lParam);
          pt.y = HIWORD(lParam);
@@ -127,6 +130,7 @@ LRESULT CALLBACK Button::WndProc(UINT message, WPARAM wParam, LPARAM lParam) {
             this->statuse_ = NORMAL;
             if ((wParam & MK_LBUTTON) == 0) {
                ::ReleaseCapture();
+               ::SetCursor(::LoadCursor(NULL, MAKEINTRESOURCE(IDC_ARROW))); 
             }
          }
          this->draw(0, 0);

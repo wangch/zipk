@@ -44,12 +44,11 @@ public:
    void show(int x, int y, int w, int h);
    void hide();
    image img() { return img_; }
-   bool is_open() { return opened_; }
 
    HWND hw_;
+   HWND pw_;
    image img_;
    int time_;
-   bool opened_;
    Gdiplus::Rect rc_;
    unzFile uf_;
    node* n_;

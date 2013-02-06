@@ -48,6 +48,7 @@ public:
    void SetRgn(HRGN rgn);
    HWND hw() { return hw_; }
    Gdiplus::Rect rect() { return rc_; } 
+   void set_hand(bool b) { hand_ = b; }
 
    LRESULT CALLBACK WndProc(UINT message, WPARAM wParam, LPARAM lParam);
 private:
@@ -68,6 +69,7 @@ private:
    WNDPROC btn_proc_;
    int statuse_;
    HDC mdc_;
+   bool hand_;
 };
 
 #endif

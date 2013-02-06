@@ -124,7 +124,7 @@ struct LV {
    Gdiplus::Font* f;
    Gdiplus::Font* f1;
    bool moving;
-   Button btns[4];
+   Button btns[5];
    unzFile unz;
    PicEx pe;
    node* root;
@@ -136,6 +136,9 @@ struct LV {
    WNDPROC tbar_proc;
    WNDPROC bbar_proc;
    HDC memdc1, memdc2;
+   std::wstring bstr; 
+   int slen;
+   bool dok;
 } g_lv;
 
 node::~node() {
@@ -153,7 +156,6 @@ std::wstring to_lower(const std::wstring& str) {
    }
    return s;
 }
-
 
 static int add_node(node* n, const std::wstring& path) {
    std::vector<std::wstring> vp;
@@ -219,7 +221,9 @@ static int add_node(node* n, const std::wstring& path) {
 static int add_items1();
 
 static unsigned int __stdcall display_tm(void* p) {
-   return add_items1();
+   add_items1();
+   g_lv.dok = true;
+   return 0;
 }
 
 static void add_subtxt(int i, node* c) {
@@ -244,19 +248,22 @@ static void add_subtxt(int i, node* c) {
 }
 
 static int add_items() {
+   ListView_DeleteAllItems(g_lv.lv);
+
    int style = ::SendMessage(g_lv.lv, LVM_GETVIEW, 0, 0);
    if (style == LV_VIEW_TILE) {
       unsigned int n;
+      g_lv.dok = false;
       ::_beginthreadex(0, 0, display_tm, 0, 0, &n);
+      return 0;
    }
 
    SHFILEINFO si;
    HIMAGELIST il = (HIMAGELIST)::SHGetFileInfo(L"", 0, &si, sizeof(si), SHGFI_SYSICONINDEX);
    ListView_SetImageList(g_lv.lv, il, LVSIL_NORMAL);
 
-   ListView_DeleteAllItems(g_lv.lv);
    LVITEM lvi;
-   lvi.pszText   = L"";//LPSTR_TEXTCALLBACK;
+   lvi.pszText   = L"";
    lvi.mask      = LVIF_TEXT | LVIF_IMAGE | LVIF_PARAM;
    lvi.stateMask = 0;
    lvi.iSubItem  = 0;
@@ -291,7 +298,6 @@ static int add_items() {
 }
 
 static int add_items1() {
-   ListView_DeleteAllItems(g_lv.lv);
    LVITEM lvi;
    lvi.pszText   = L"";
    lvi.mask      = LVIF_TEXT | LVIF_IMAGE | LVIF_PARAM;
@@ -469,16 +475,21 @@ static int btn_click1(Button* btn) {
    if(g_lv.n != g_lv.root) {
       g_lv.n = g_lv.n->p;
       add_items();
-   } else { // 按钮变灰
-   }
+   } 
    return 0;
 }
 
 static int btn_click2(Button* btn) {
+   g_lv.n = g_lv.root;
+   add_items();
    return 0;
 }
 
 static int btn_click3(Button* btn) {
+   if (!g_lv.dok) {
+      return 0;
+   }
+
    int style = ::SendMessage(g_lv.lv, LVM_GETVIEW, 0, 0);
    if (style == LV_VIEW_DETAILS) {
       ::SendMessage(g_lv.lv, LVM_SETVIEW, LV_VIEW_TILE, 0);
@@ -490,6 +501,11 @@ static int btn_click3(Button* btn) {
       ::SendMessage(g_lv.lv, LVM_SETVIEW, LV_VIEW_DETAILS, 0);
    }
    add_items();
+   return 0;
+}
+
+static int btn_click4(Button* btn) {
+   ::ShellExecute(NULL, L"open", L"explorer", L"http://www.itensoft.com", NULL, SW_SHOW);
    return 0;
 }
 
@@ -560,6 +576,7 @@ static void do_tbarsize(HWND hw, int w, int h) {
    g_lv.btns[1].Show(w0+80, btn_top, 60, 22);
    g_lv.btns[2].Show(w0+80+80, btn_top, 60, 22);
    g_lv.btns[3].Show(w0+80+80+80, btn_top, 60, 22);
+   g_lv.btns[4].Show(w-160, 0, 160, h);
    ::InvalidateRect(hw, NULL, 0);
 };
 
@@ -591,11 +608,20 @@ static void do_bbardraw(HWND hWnd, int w, int h) {
    Gdiplus::SolidBrush br(Gdiplus::Color::White);
    br.SetColor(Gdiplus::Color(255, 140, 1));
 
-   int bh0 = 24;
-   int bw0 = 160;
+   int bh0 = 22;
+   int bw0 = 200;
    g.FillRectangle(&br, 0, 0, w-bw0-bh0, h); // 底部黄色
    g.DrawImage(g_lv.bgs[2], w-bw0-24, 0, 24, h);
-   g.DrawImage(g_lv.bgs[3], w-bw0-2, 0, bw0+8, h);
+   g.DrawImage(g_lv.bgs[3], w-bw0, 0, bw0+8, h);
+
+   int l = g_lv.bstr.length();
+   if (l > 0) {
+      Gdiplus::PointF pt;
+      pt.X =  (Gdiplus::REAL)w - l * g_lv.slen - 16;
+      pt.Y = 4;
+      br.SetColor(Gdiplus::Color::White);
+      g.DrawString(g_lv.bstr.c_str(), l, g_lv.f, pt, &br);
+   }
 
    ::DeleteObject(memmap);
    ::DeleteDC(g_lv.memdc2);
@@ -635,6 +661,41 @@ static LRESULT CALLBACK _bbar_proc(HWND hWnd, UINT message, WPARAM wParam, LPARA
    return ::CallWindowProc(g_lv.bbar_proc, hWnd, message, wParam, lParam);
 }
 
+static Gdiplus::Size getTxtSize(std::wstring txt) {
+   Gdiplus::GraphicsPath path;
+   Gdiplus::FontFamily ff;
+   Gdiplus::Font* font = g_lv.f;
+   font->GetFamily(&ff);
+
+   Gdiplus::Rect rc;
+   Gdiplus::Size sz;
+   int len = txt.length();
+   if (len == 0) {
+      return sz;
+   }
+
+   bool is_space = false;
+   if (txt[len - 1] == L' ') {
+      txt[len - 1] = L'M';
+      is_space = true;
+   }
+
+   path.AddString(txt.c_str(), 
+      len, &ff, 
+      font->GetStyle(), 
+      font->GetSize(), 
+      Gdiplus::Point(1, 0), 
+      NULL);
+   path.GetBounds(&rc);
+
+   int sd = (int)(font->GetSize() / 4);
+   sz.Width = rc.Width + sd;
+   if (is_space) {
+      sz.Width -= sd;
+   }
+   sz.Height = rc.Height;
+   return sz;
+}
 
 static int init(HWND pw) {
    InitCommonControls();
@@ -656,8 +717,10 @@ static int init(HWND pw) {
    g_lv.btns[0].Init(0, hw, hInst, 0, btn_click0);
    g_lv.btns[1].Init(1, hw, hInst, 0, btn_click1);
    g_lv.btns[2].Init(2, hw, hInst, 0, btn_click2);
-   g_lv.btns[3].Init(3, hw, hInst, 0, btn_click3);
-           
+   g_lv.btns[3].Init(3, hw, hInst, 0, btn_click3);        
+   g_lv.btns[4].Init(4, hw, hInst, 0, btn_click4);
+   g_lv.btns[4].set_hand(true);
+
    g_lv.btns[0].SetTxtFont(f);
    g_lv.btns[1].SetTxtFont(f);
    g_lv.btns[2].SetTxtFont(f);
@@ -684,11 +747,15 @@ static int init(HWND pw) {
    g_lv.btns[3].SetImg(hInst, IDB_PNG_BTN4, 1, 0, 0, 24, 20);
    g_lv.btns[3].SetImg(hInst, IDB_PNG_BTN4, 2, 0, 0, 24, 20);
    
-   for (int i = 0; i < 5; ++i) {
+   g_lv.btns[4].SetImg(hInst, IDB_PNG_BG5, 0, 0, 0, 160, 48);
+   g_lv.btns[4].SetImg(hInst, IDB_PNG_BG5, 1, 0, 0, 160, 48);
+   g_lv.btns[4].SetImg(hInst, IDB_PNG_BG5, 2, 0, 0, 160, 48);
+
+   for (int i = 0; i < 4; ++i) {
       g_lv.bgs[i] = bkimg(i+IDB_PNG_BG1);
    }
 
-   g_lv.btns[0].SetText(L"打開", 30, 6);
+   g_lv.btns[0].SetText(L"打开", 30, 6);
    g_lv.btns[1].SetText(L"向上", 30, 6);
    g_lv.btns[2].SetText(L"主页", 30, 6);
    g_lv.btns[3].SetText(L"视图", 30, 6);
@@ -706,6 +773,7 @@ static int init(HWND pw) {
    }
    g_lv.lv = hw;
    SendMessage(hw, LVM_SETEXTENDEDLISTVIEWSTYLE, LVS_EX_DOUBLEBUFFER, LVS_EX_DOUBLEBUFFER);
+   g_lv.dok = true;
 
    hw = ::CreateWindowEx(0, WC_STATIC, L"",
       WS_CHILD | WS_VISIBLE, 
@@ -714,6 +782,9 @@ static int init(HWND pw) {
    if (!hw) {
       return -1;
    }
+   std::wstring sss = L"ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+   g_lv.slen = getTxtSize(sss).Width / sss.length() + 2;
+   g_lv.bstr = L"Copyright www.itensoft.com";
    g_lv.bbar =  hw;
    g_lv.bbar_proc = (WNDPROC)::SetWindowLongPtr(hw, GWLP_WNDPROC, (LONG)_bbar_proc);
 
@@ -726,7 +797,7 @@ static int init(HWND pw) {
 
    wchar_t* arr[4] = { L"名称", L"修改日期", L"类型", L"大小" };
    LVCOLUMN lvc;
-   lvc.mask = LVCF_FMT | LVCF_WIDTH | LVCF_TEXT | LVCF_SUBITEM;// | LVCF_ORDER;
+   lvc.mask = LVCF_FMT | LVCF_WIDTH | LVCF_TEXT | LVCF_SUBITEM;
    lvc.fmt = LVCFMT_LEFT;
    for (int i = 0; i < 4; ++i) {
       lvc.iSubItem = i;
@@ -742,8 +813,8 @@ static int init(HWND pw) {
    return 0;
 }
 
-static void open_exp(node* n, int x, int y, int w, int h) {
-   g_lv.pe.Init(NULL, hInst, g_lv.unz);
+static void open_exp(HWND hw, node* n, int x, int y, int w, int h) {
+   g_lv.pe.Init(hw, hInst, g_lv.unz);
    image img = unzip_img(n, g_lv.unz);
    if (img.img) {
       g_lv.pe.set_img(n, img);
@@ -820,7 +891,7 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
    hInst = hInstance; // 将实例句柄存储在全局变量中
 
    hWnd = CreateWindow(szWindowClass, szTitle, WS_OVERLAPPEDWINDOW,
-      CW_USEDEFAULT, 0, CW_USEDEFAULT, 0, NULL, NULL, hInstance, NULL);
+      300, 100, 800, 600, NULL, NULL, hInstance, NULL);
 
    if (!hWnd)
    {
@@ -938,7 +1009,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	case WM_PAINT:
 		hdc = BeginPaint(hWnd, &ps);
 		// TODO: 在此添加任意绘图代码...
-      // re_draw(ps.rcPaint, hdc);
 		EndPaint(hWnd, &ps);
 		break;
    case WM_NOTIFY:
@@ -957,7 +1027,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                   add_items();
                } 
                if (n->type == 1) {
-                  open_exp(n, 300, 200, 600, 500);
+                  open_exp(hWnd, n, 300, 200, 600, 500);
                }
                ::InvalidateRect(hWnd, NULL, TRUE);
             }

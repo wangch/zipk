@@ -12,7 +12,7 @@
 #include <process.h>
 #include <Windowsx.h>
 
-PicEx::PicEx() : opened_(false) {
+PicEx::PicEx() {
 }
 
 PicEx::~PicEx() {
@@ -35,7 +35,6 @@ struct tool_bar {
    bool slider_show;
    int zoom;
    WINDOWPLACEMENT wp;
-   //HANDLE m;
    int status;
 } g_tb;
 
@@ -371,7 +370,6 @@ static void init(HWND pw, HINSTANCE hInst) {
    g_tb.btns[4].Init(4, hw, hInst, 0, 0, btn_click4);
    g_tb.btns[5].Init(5, hw, hInst, 0, 0, btn_click5);
    g_tb.btns[6].Init(6, hw, hInst, 0, 0, btn_click6);
-   //g_tb.btns[7].Init(7, pw, hInst, btn_click7);
 
    Gdiplus::Color bk_color(193, 214, 235);
    g_tb.btns[0].SetBkColor(bk_color);
@@ -381,7 +379,7 @@ static void init(HWND pw, HINSTANCE hInst) {
    g_tb.btns[4].SetBkColor(bk_color);
    g_tb.btns[5].SetBkColor(bk_color);
    g_tb.btns[6].SetBkColor(bk_color);
-   //g_tb.btns[7].SetBkColor(bk_color);
+
    set_imgs1(hInst);
 
    hw = ::CreateWindowEx(0, TRACKBAR_CLASS, L"", 
@@ -446,7 +444,8 @@ static LRESULT CALLBACK _WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM 
             ::GlobalFree(pe->img_.hg);
             pe->img_.img = 0;
             pe->img_.hg = 0;
-            pe->opened_ = false;
+            ::EnableWindow(pe->pw_, TRUE);
+            ::SetForegroundWindow(pe->pw_);
          }
       }
       break;
@@ -502,12 +501,12 @@ ATOM reg_class(HINSTANCE hInstance, int idc) {
    wcex.cbClsExtra		= 0;
    wcex.cbWndExtra		= 0;
    wcex.hInstance		= hInstance;
-   wcex.hIcon			= 0;//LoadIcon(hInstance, MAKEINTRESOURCE(IDI_ZIPK));
+   wcex.hIcon			= 0;
    wcex.hCursor		= LoadCursor(NULL, IDC_ARROW);
    wcex.hbrBackground	= (HBRUSH)(COLOR_WINDOW+1);
    wcex.lpszMenuName	= MAKEINTRESOURCE(idc);
    wcex.lpszClassName	= pic_class_name;
-   wcex.hIconSm		= 0;//LoadIcon(wcex.hInstance, MAKEINTRESOURCE(IDI_SMALL));
+   wcex.hIconSm		= 0;
 
    ATOM r = RegisterClassEx(&wcex);
    if (!r) {
@@ -518,30 +517,23 @@ ATOM reg_class(HINSTANCE hInstance, int idc) {
 }
 
 int PicEx::Init(HWND pw, HINSTANCE hinst, unzFile uf) {
-   if (this->opened_) {
-      delete this->img_.img;
-      this->img_.img = 0;
-      g_tb.img.SetImg(0);
-      ::GlobalFree(this->img_.hg);
-      this->img_.hg = 0;
-      return 0;
-   }
+   ::EnableWindow(pw, FALSE);
 
    reg_class(hinst, 0);
    HWND hw = ::CreateWindowEx(0, pic_class_name, L"Í¼Æ¬ä¯ÀÀÆ÷", 
       WS_OVERLAPPEDWINDOW,
-      0, 0, 0, 0, 0, 0, hinst, NULL);
+      0, 0, 0, 0, pw, 0, hinst, NULL);
    if (!hw) {
       int e = ::GetLastError();
       return -1;
    }
    
    this->hw_ = hw;
+   this->pw_ = pw;
    this->uf_ = uf;
 
    init(hw, hinst);
     ::SetWindowLongPtr(this->hw_, GWLP_USERDATA, (LONG)this);
-   this->opened_ = true;
 
    return 0;
 }
@@ -581,13 +573,13 @@ image unzip_img(node* n, unzFile uf) {
       __int64 rd = 0;
       const int BL = 8192;
       char buf[BL];
-      int n = 0;
+      int rn = 0;
       do {
-         n = unzReadCurrentFile(uf, buf, BL);
+         rn = unzReadCurrentFile(uf, buf, BL);
          char* p = (char*)pmem;
-         ::memcpy(p+rd, buf, n);
-         rd += n;
-      } while (n);
+         ::memcpy(p+rd, buf, rn);
+         rd += rn;
+      } while (rn);
       unzCloseCurrentFile(uf);
       LPSTREAM is;
       if (::CreateStreamOnHGlobal(pmem, FALSE, &is) == S_OK) {
